@@ -31,11 +31,11 @@ jobs:
           sed -i 's/<string name="app_name">.*<\/string>/<string name="app_name">Dijital Esnaf Defteri<\/string>/g' "$STRING_FILE"
         fi
 
-    - name: JDK 11 Kurulumu
+    - name: JDK 17 Kurulumu
       uses: actions/setup-java@v3
       with:
         distribution: 'temurin'
-        java-version: '11'
+        java-version: '17'
 
     - name: APK Derle
       run: |
