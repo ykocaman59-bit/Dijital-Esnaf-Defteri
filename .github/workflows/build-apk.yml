@@ -20,7 +20,16 @@ jobs:
     - name: Paketleri Kur ve Projeyi Senkronize Et
       run: |
         npm install
+        npx cap update android
         npx cap sync android
+
+    - name: Uygulama İsmini Güncelle
+      run: |
+        # strings.xml dosyasına doğru uygulama adını doğrudan yazıyoruz
+        STRING_FILE="android/app/src/main/res/values/strings.xml"
+        if [ -f "$STRING_FILE" ]; then
+          sed -i 's/<string name="app_name">.*<\/string>/<string name="app_name">Dijital Esnaf Defteri<\/string>/g' "$STRING_FILE"
+        fi
 
     - name: JDK 11 Kurulumu
       uses: actions/setup-java@v3
@@ -37,6 +46,6 @@ jobs:
     - name: APK Dosyasını Kaydet
       uses: actions/upload-artifact@v4
       with:
-        name: dijital-esnaf-defteri-apk
+        name: Dijital-Esnaf-Defteri
         path: android/app/build/outputs/apk/debug/app-debug.apk
         
