@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <!-- Arka Plan -->
+  <rect width="512" height="512" rx="110" fill="#2c3e50"/>
+  
+  <!-- Defter / Sayfa Simgesi -->
+  <path d="M140 110h200a30 30 0 0 1 30 30v232a30 30 0 0 1-30 30H140a30 30 0 0 1-30-30V140a30 30 0 0 1 30-30z" fill="#ffffff" opacity="0.1"/>
+  <path d="M160 140h192a20 20 0 0 1 20 20v192a20 20 0 0 1-20 20H160a20 20 0 0 1-20-20V160a20 20 0 0 1 20-20z" fill="#ffffff"/>
+  
+  <!-- Cilt / Sol Şerit -->
+  <path d="M140 140h30v232h-30a20 20 0 0 1-20-20V160a20 20 0 0 1 20-20z" fill="#27ae60"/>
+
+  <!-- Harfler (ED) -->
+  <text x="235" y="275" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="95" font-weight="bold" fill="#2c3e50" text-anchor="middle">ED</text>
+  
+  <!-- Vurgu Çizgileri (Defter Çizgileri) -->
+  <line x1="230" y1="305" x2="335" y2="305" stroke="#bdc3c7" stroke-width="8" stroke-linecap="round"/>
+  <line x1="230" y1="330" x2="300" y2="330" stroke="#bdc3c7" stroke-width="8" stroke-linecap="round"/>
+</svg>
+
