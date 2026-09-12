@@ -11,6 +11,21 @@
             --danger: #c0392b;
             --bg: #f5f6fa;
         }
+        /* Ekranın her yerinde yazıların kopyalanmasını ve seçilmesini engeller */
+        * {
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+            -webkit-touch-callout: none;
+        }
+        /* Input alanlarına veri girilebilmesi için istisna tanımı */
+        input, select {
+            -webkit-user-select: text;
+            -moz-user-select: text;
+            -ms-user-select: text;
+            user-select: text;
+        }
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
             background-color: var(--bg);
@@ -109,6 +124,52 @@
             font-weight: bold;
             margin-top: 5px;
         }
+
+        /* Özel Modal (Pop-up) Tasarımları */
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+        }
+        .modal-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+        .modal-box {
+            background: #fff;
+            width: 90%;
+            max-width: 350px;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            text-align: center;
+        }
+        .modal-box h3 {
+            margin-top: 0;
+            color: var(--primary);
+        }
+        .modal-box p {
+            font-size: 15px;
+            color: #555;
+            margin-bottom: 20px;
+        }
+        .modal-buttons {
+            display: flex;
+            gap: 10px;
+        }
+        .modal-buttons button {
+            margin-top: 0;
+        }
+        .btn-cancel {
+            background-color: #95a5a6;
+        }
     </style>
 </head>
 <body>
@@ -137,12 +198,54 @@
     <div id="customerList"></div>
 </div>
 
+<!-- ÖZEL MODAL PENCERE -->
+<div class="modal-overlay" id="customModal">
+    <div class="modal-box">
+        <h3 id="modalTitle">Uyarı</h3>
+        <p id="modalText">Mesaj içeriği buraya gelecek.</p>
+        <div class="modal-buttons" id="modalButtons">
+            <!-- Butonlar JavaScript ile dinamik eklenecek -->
+        </div>
+    </div>
+</div>
+
 <script>
     let customers = JSON.parse(localStorage.getItem('esnaf_customers')) || [];
+    let selectedCustomerId = null;
 
     function saveData() {
         localStorage.setItem('esnaf_customers', JSON.stringify(customers));
         render();
+    }
+
+    function showModal(title, text, type, customerId = null) {
+        const overlay = document.getElementById('customModal');
+        const titleEl = document.getElementById('modalTitle');
+        const textEl = document.getElementById('modalText');
+        const buttonsEl = document.getElementById('modalButtons');
+
+        titleEl.innerText = title;
+        textEl.innerText = text;
+        buttonsEl.innerHTML = '';
+
+        if (type === 'confirm') {
+            selectedCustomerId = customerId;
+            buttonsEl.innerHTML = `
+                <button class="btn-cancel" onclick="closeModal()">İptal</button>
+                <button style="background-color: var(--danger);" onclick="confirmDelete()">Evet, Sil</button>
+            `;
+        } else {
+            // Sadece bilgilendirme (Hata veya Engelleme mesajı)
+            buttonsEl.innerHTML = `
+                <button onclick="closeModal()">Tamam</button>
+            `;
+        }
+        overlay.classList.add('active');
+    }
+
+    function closeModal() {
+        document.getElementById('customModal').classList.remove('active');
+        selectedCustomerId = null;
     }
 
     function addCustomer() {
@@ -152,13 +255,11 @@
         const type = document.getElementById('type').value;
 
         if (!name || isNaN(amount)) {
-            alert('Lütfen geçerli bir isim ve tutar girin.');
+            showModal("Eksik Bilgi", "Lütfen geçerli bir isim ve tutar girin.", "alert");
             return;
         }
 
-        // Aynı isimli müşteri varsa güncelle, yoksa yeni ekle
         let existing = customers.find(c => c.name.toLowerCase() === name.toLowerCase());
-        
         let netAmount = type === 'borc' ? amount : -amount;
 
         if (existing) {
@@ -193,16 +294,33 @@
         }
     }
 
-    function deleteCustomer(id) {
-        if (confirm("Bu müşteriyi silmek istediğinize emin misiniz?")) {
-            customers = customers.filter(c => c.id !== id);
+    // Silme butonuna basıldığında tetiklenen fonksiyon
+    function promptDelete(id) {
+        let customer = customers.find(c => c.id === id);
+        if (!customer) return;
+
+        // Bakiye kontrolü (0 değilse silmeye engel ol)
+        if (customer.balance !== 0) {
+            let durumMetni = customer.balance > 0 ? "borcu bulunmaktadır" : "alacağı bulunmaktadır";
+            showModal("Silme İşlemi Başarısız", `Bu müşterinin aktif ${Math.abs(customer.balance)} TL ${durumMetni}. Bakiyesi 0 (sıfır) olmayan müşteriler silinemez! Önce hesabı kapatmalısınız.`, "alert");
+        } else {
+            // Bakiye 0 ise özel onay modalını göster
+            showModal("Müşteri Silme", `"${customer.name}" adlı müşteriyi silmek istediğinize emin misiniz?`, "confirm", id);
+        }
+    }
+
+    // Modal üzerinden "Evet, Sil" denildiğinde çalışan fonksiyon
+    function confirmDelete() {
+        if (selectedCustomerId !== null) {
+            customers = customers.filter(c => c.id !== selectedCustomerId);
             saveData();
+            closeModal();
         }
     }
 
     function sendWhatsApp(name, phone, balance) {
         if (!phone) {
-            alert("Bu müşteriye ait telefon numarası kayıtlı değil.");
+            showModal("Uyarı", "Bu müşteriye ait telefon numarası kayıtlı değil.", "alert");
             return;
         }
         let formattedPhone = phone.startsWith('0') ? '9' + phone : phone;
@@ -228,6 +346,8 @@
 
         customers.forEach(c => {
             if (c.balance > 0) totalB += c.balance;
+            if (c.balance < 1 && c.balance < 0) totalA += Math.abs(c.balance); // Düzeltilmiş alacak hesabı
+            // Alternatif netleştirme:
             if (c.balance < 0) totalA += Math.abs(c.balance);
 
             let balanceClass = c.balance > 0 ? 'borc' : (c.balance < 0 ? 'alacak' : '');
@@ -244,7 +364,7 @@
                         <button onclick="updateBalance(${c.id}, 'borc')">+ Borç</button>
                         <button onclick="updateBalance(${c.id}, 'alacak')" style="background-color:var(--success)">+ Ödeme</button>
                         ${c.phone ? `<button class="btn-wa" onclick="sendWhatsApp('${c.name}', '${c.phone}', ${c.balance})">WhatsApp</button>` : ''}
-                        <button class="btn-del" onclick="deleteCustomer(${c.id})">Sil</button>
+                        <button class="btn-del" onclick="promptDelete(${c.id})">Sil</button>
                     </div>
                 </div>
             `;
@@ -260,4 +380,3 @@
 
 </body>
 </html>
-
