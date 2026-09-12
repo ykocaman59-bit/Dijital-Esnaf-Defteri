@@ -1,0 +1,44 @@
+name: Build Android APK
+
+on:
+  push:
+    branches: [ main, master ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Depoyu Kopyala
+      uses: actions/checkout@v4
+
+    - name: Node.js Kurulumu
+      uses: actions/setup-node@v4
+      with:
+        node-version: 18
+
+    - name: Capacitor ve Cordova Hazırlığı
+      run: |
+        npm init -y
+        npm install @capacitor/core @capacitor/cli @capacitor/android
+        npx cap init "Esnaf Defteri" "com.esnaf.defteri" --web-dir .
+        npx cap add android
+
+    - name: JDK (Java Development Kit) Kurulumu
+      uses: actions/setup-java@v3
+      with:
+        distribution: 'temurin'
+        java-version: '17'
+
+    - name: APK Derleme (Gradle)
+      run: |
+        cd android
+        chmod +x gradlew
+        ./gradlew assembleDebug
+
+    - name: APK Dosyasını Kaydet
+      uses: actions/upload-artifact@v4
+      with:
+        name: esnaf-defteri-apk
+        path: android/app/build/outputs/apk/debug/app-debug.apk
+        
