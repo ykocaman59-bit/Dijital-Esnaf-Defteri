@@ -208,7 +208,7 @@
             cursor: pointer;
         }
 
-        /* Google Hesap Seçici Modal (Görseldeki Tasarım) */
+        /* Google Hesap Seçici Modal (Şık Tasarım) */
         .google-modal-overlay {
             position: fixed;
             top: 0; left: 0; width: 100%; height: 100%;
@@ -430,7 +430,7 @@
     <div id="customerPortalContent"></div>
 </div>
 
-<!-- GOOGLE HESAP SEÇİCİ MODAL (Görseldeki Tasarım) -->
+<!-- GOOGLE HESAP SEÇİCİ MODAL -->
 <div class="google-modal-overlay" id="googleAccountModal">
     <div class="google-modal-box">
         <div class="google-modal-header">
@@ -443,7 +443,7 @@
             Devam etmek için bir Google hesabı seçin:
         </div>
         <div class="google-accounts-list" id="deviceAccountsList">
-            <!-- Cihazdaki / Kayıtlı Gmailler dinamik olarak buraya gelecek -->
+            <!-- Kayıtlı ve dinamik hesaplar buraya gelecek -->
         </div>
     </div>
 </div>
@@ -521,40 +521,40 @@
         selectedCustomerId = null;
     }
 
-    // Google Hesap Seçici Penceresini Aç
+    // Google Hesap Seçici Penceresini Aç ve Sistemdeki Kayıtlı Mailleri Göster
     function openGoogleAccountSelector() {
         const listContainer = document.getElementById('deviceAccountsList');
         listContainer.innerHTML = '';
 
-        // Cihazda olabilecek örnek simüle edilmiş Google hesapları havuzu + sistemdeki kayıtlı olanlar
-        // Böylece test ederken hem kayıtlı hem kayıtsız gmailleri deneyebilirsin.
-        let sampleDeviceAccounts = [
-            { name: "Yusuf Kocaman", email: "ykocaman59@gmail.com" },
-            { name: "Barbar Kimya", email: "ykocaman45.yk@gmail.com" },
-            { name: "Test Deneme", email: "testhesabi@gmail.com" }
-        ];
+        // Eğer henüz kayıtlı müşteri yoksa bilgilendirme gösterelim
+        if (customers.length === 0) {
+            listContainer.innerHTML = '<div style="padding: 20px; text-align: center; color: #888; font-size: 14px;">Sistemde kayıtlı müşteri veya Gmail adresi bulunmuyor. Önce Satıcı panelinden müşteri eklemelisiniz.</div>';
+            document.getElementById('googleAccountModal').classList.add('active');
+            return;
+        }
 
-        // Ayrıca satıcının veritabanına eklediği ama listede olmayan varsa onları da ekleyelim
+        // Satıcının veritabanına eklediği tüm müşteri maillerini listeye yansıtıyoruz
         customers.forEach(c => {
-            if (c.email && !sampleDeviceAccounts.some(acc => acc.email.toLowerCase() === c.email.toLowerCase())) {
-                sampleDeviceAccounts.push({ name: c.name, email: c.email });
+            if (c.email) {
+                let firstLetter = c.name ? c.name.charAt(0).toUpperCase() : 'M';
+                let div = document.createElement('div');
+                div.className = 'google-account-item';
+                div.innerHTML = `
+                    <div class="account-avatar">${firstLetter}</div>
+                    <div class="account-info">
+                        <span class="account-name">${c.name}</span>
+                        <span class="account-email">${c.email}</span>
+                    </div>
+                `;
+                div.onclick = () => selectGoogleAccount(c.email);
+                listContainer.appendChild(div);
             }
         });
 
-        sampleDeviceAccounts.forEach(acc => {
-            let firstLetter = acc.name.charAt(0).toUpperCase();
-            let div = document.createElement('div');
-            div.className = 'google-account-item';
-            div.innerHTML = `
-                <div class="account-avatar">${firstLetter}</div>
-                <div class="account-info">
-                    <span class="account-name">${acc.name}</span>
-                    <span class="account-email">${acc.email}</span>
-                </div>
-            `;
-            div.onclick = () => selectGoogleAccount(acc.email);
-            listContainer.appendChild(div);
-        });
+        // Test amaçlı eklenmiş ama maili olmayan müşteri varsa onları da filtrele
+        if (listContainer.innerHTML === '') {
+            listContainer.innerHTML = '<div style="padding: 20px; text-align: center; color: #888; font-size: 14px;">Kayıtlı müşterilere ait Gmail adresi bulunamadı.</div>';
+        }
 
         document.getElementById('googleAccountModal').classList.add('active');
     }
@@ -563,7 +563,7 @@
         document.getElementById('googleAccountModal').classList.remove('active');
     }
 
-    // Google Modabından Hesap Seçildiğinde Çalışacak Mantık
+    // Seçilen Google Hesabını Kontrol Et
     function selectGoogleAccount(email) {
         closeGoogleModal();
         let found = customers.find(c => c.email && c.email.toLowerCase() === email.toLowerCase());
@@ -572,7 +572,7 @@
             renderCustomerPortal(found);
             showScreen('customerPanelScreen');
         } else {
-            showModal("Kayıt Bulunamadı", "Seçtiğiniz (" + email + ") Google hesabına ait sistemde kayıtlı bir müşteri bulunmamaktadır.", "alert");
+            showModal("Bu kullanıcı bulunmamaktadır", "Seçtiğiniz (" + email + ") Google hesabına ait sistemde kayıtlı bir müşteri bulunmamaktadır.", "alert");
         }
     }
 
@@ -603,11 +603,10 @@
                 let isBorc = h.type === 'borc';
                 let itemClass = isBorc ? 'tx-borc' : 'tx-alacak';
                 let textDesc = isBorc ? `+${h.amount} TL Borç Eklendi` : `-${h.amount} TL Ödeme Alındı`;
-                let descExtra = h.desc ? ` (${h.desc})` : '';
                 historyHtml += `
                     <div class="transaction-history-item ${itemClass}">
                         <div>
-                            <div style="font-weight: 600;">${textDesc}${descExtra}</div>
+                            <div style="font-weight: 600;">${textDesc}</div>
                             <div style="font-size: 11px; color: #7f8c8d; margin-top: 2px;">${h.date}</div>
                         </div>
                     </div>
