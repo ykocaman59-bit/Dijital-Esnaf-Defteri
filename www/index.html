@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dijital Esnaf Defteri - Çoklu Satıcı ve Patron Paneli</title>
+    <title>Dijital Esnaf Defteri - Çoklu Satıcı ve PDF Arşiv</title>
     <style>
         :root {
             --primary: #2c3e50;
@@ -118,6 +118,7 @@
         .btn-del { background-color: var(--danger); }
         .btn-warn { background-color: var(--warning); }
         .btn-patron { background-color: var(--patron); }
+        .btn-pdf { background-color: #e67e22; }
         
         .summary-box {
             display: flex;
@@ -267,6 +268,14 @@
             border-left: 4px solid #3498db;
             font-size: 14px;
         }
+
+        /* YAZDIRMA / PDF STİLLERİ */
+        @media print {
+            body { background: #fff; color: #000; padding: 0; }
+            .screen, .container { display: none !important; }
+            #printArea { display: block !important; width: 100%; padding: 20px; }
+        }
+        #printArea { display: none; font-family: Arial, sans-serif; }
     </style>
 </head>
 <body>
@@ -277,7 +286,7 @@
     <div class="splash-title">Dijital Esnaf Defteri</div>
 </div>
 
-<!-- 1. GİRİŞ SEÇİM Ekrani -->
+<!-- 1. GİRİŞ SEÇİM EKRANI -->
 <div id="roleSelectScreen" class="screen container" style="margin-top: 30px;">
     <h2>Dijital Esnaf Defteri</h2>
     <p style="text-align: center; color: #666; margin-bottom: 20px;">Lütfen giriş türünüzü seçin</p>
@@ -342,7 +351,7 @@
         <button onclick="addNewSeller()" style="background-color: var(--patron);">Satıcıyı Kaydet</button>
     </div>
 
-    <h3>Kayıtlı Satıcılar Listesi</h3>
+    <h3>Kayıtlı Satıcılar Listesi ve Raporları</h3>
     <div id="patronSellersList"></div>
 </div>
 
@@ -364,6 +373,8 @@
         <div style="border-left: 1px solid rgba(255,255,255,0.2);">Toplam Borç <span id="totalAlacak" class="alacak">0 TL</span></div>
     </div>
 
+    <button class="btn-pdf" onclick="generateSellerPDF(currentLoggedInSeller.id)" style="margin-bottom: 15px;">📥 Tüm Defteri PDF Olarak İndir / Yazdır</button>
+
     <div class="card">
         <h3>Yeni Müşteri Ekle</h3>
         <input type="text" id="name" placeholder="Müşteri Adı Soyadı * (Zorunlu)">
@@ -384,7 +395,7 @@
             <h3 style="margin:0;">Müşteri Giriş Bilgileri</h3>
             <button onclick="closeCredentialsModal()" style="width: auto; padding: 4px 8px; font-size: 14px; background:#e74c3c; margin:0;">X</button>
         </div>
-        <p style="font-size: 12px; color: #666; margin-top:0; text-align: left;">Müşterilerin sisteme girebilmesi için gereken kullanıcı adı ve şifreleri buradan yönetebilirsiniz.</p>
+        <p style="font-size: 12px; color: #666; margin-top:0; text-align: left;">Müşterilerin sisteme girebilmesi için gereken kullanıcı adı ve şifreyi buradan yönetebilirsiniz.</p>
         <div id="credentialsListContainer" style="max-height: 300px; overflow-y: auto; text-align: left;"></div>
     </div>
 </div>
@@ -396,6 +407,9 @@
     <div id="customerPortalContent"></div>
 </div>
 
+<!-- YAZDIRMA VE PDF ÇIKTI ALANI (Gizli) -->
+<div id="printArea"></div>
+
 <!-- GENEL UYARI MODALI -->
 <div class="modal-overlay" id="customModal">
     <div class="modal-box">
@@ -406,14 +420,12 @@
 </div>
 
 <script>
-    // Veritabanı Yapısı (LocalStorage)
-    // Varsayılan bir test satıcısı ve patron ekleyelim
     let sellers = JSON.parse(localStorage.getItem('esnaf_sellers')) || [
         { id: 1, storeName: "Merkez Kırtasiye", username: "merkez", password: "123" }
     ];
     let customers = JSON.parse(localStorage.getItem('esnaf_customers')) || [];
 
-    let currentLoggedInSeller = null; // Aktif giriş yapmış satıcı nesnesi
+    let currentLoggedInSeller = null;
     let selectedCustomerId = null;
     let selectedSellerIdForDelete = null;
 
@@ -525,7 +537,7 @@
         }
 
         if (sellers.some(s => s.username === username)) {
-            showModal("Kullanıcı Adı Alınmış", "Bu kullanıcı adı başka bir satıcı tarafından kullanılıyor. Lütfen başka bir kullanıcı adı seçin.", "alert");
+            showModal("Kullanıcı Adı Alınmış", "Bu kullanıcı adı başka bir satıcı tarafından kullanılıyor.", "alert");
             return;
         }
 
@@ -548,14 +560,22 @@
     function promptDeleteSeller(sellerId) {
         let seller = sellers.find(s => s.id === sellerId);
         if (!seller) return;
-        showModal("Satıcı Silme", `"${seller.storeName}" adlı satıcıyı ve bağlı tüm müşterilerini silmek istediğinize emin misiniz?`, "confirm_seller_delete", sellerId);
+
+        // GÜVENLİK KİLİDİ: Aktif müşterisi/borcu olan satıcı silinemez, önce uyarı verilir veya PDF alması söylenir
+        let sellerCustomers = customers.filter(c => c.sellerId === sellerId);
+        let hasActiveDebt = sellerCustomers.some(c => c.balance !== 0);
+
+        if (hasActiveDebt) {
+            showModal("Silme Engellendi!", `"${seller.storeName}" adlı satıcının hesaplarında henüz kapatılmamış borç/alacak bakiyeleri bulunan müşteriler var! Hesaplar temizlenmeden veya PDF arşivi alınmadan bu satıcı silinemez.`, "alert");
+            return;
+        }
+
+        showModal("Satıcı Silme", `"${seller.storeName}" adlı satıcıyı silmek istediğinize emin misiniz? (Önce PDF raporunu aldığınızdan emin olun)`, "confirm_seller_delete", sellerId);
     }
 
     function confirmDeleteSeller() {
         if (selectedSellerIdForDelete !== null) {
-            // Satıcıyı sil
             sellers = sellers.filter(s => s.id !== selectedSellerIdForDelete);
-            // O satıcıya ait müşterileri de temizle
             customers = customers.filter(c => c.sellerId !== selectedSellerIdForDelete);
             saveData();
             renderPatronPanel();
@@ -585,12 +605,75 @@
                     <div style="font-size: 13px; color: #555;">Kullanıcı Adı: <b>${s.username}</b> | Şifre: <b>${s.password}</b></div>
                     <div style="font-size: 12px; color: #7f8c8d; margin-top: 3px;">Kayıtlı Müşteri Sayısı: ${sellerCustomerCount}</div>
                     <div class="actions">
+                        <button class="btn-pdf" onclick="generateSellerPDF(${s.id})">PDF Arşivini İndir</button>
                         <button class="btn-del" onclick="promptDeleteSeller(${s.id})">Satıcıyı Sil</button>
                     </div>
                 </div>
             `;
             listEl.appendChild(div);
         });
+    }
+
+    // --- SATICI PDF / RAPOR OLUŞTURUCU ---
+    function generateSellerPDF(sellerId) {
+        let targetSeller = sellers.find(s => s.id === sellerId);
+        if (!targetSeller) return;
+
+        let sellerCustomers = customers.filter(c => c.sellerId === sellerId);
+        let printArea = document.getElementById('printArea');
+
+        let totalBorc = 0;
+        let totalAlacak = 0;
+
+        let customersHtml = '';
+        if (sellerCustomers.length === 0) {
+            customersHtml = '<p>Bu satıcıya ait kayıtlı müşteri bulunmamaktadır.</p>';
+        } else {
+            sellerCustomers.forEach((c, index) => {
+                if (c.balance > 0) totalBorc += c.balance;
+                if (c.balance < 0) totalAlacak += Math.abs(c.balance);
+
+                let bText = c.balance > 0 ? `${c.balance} TL Borç` : (c.balance < 0 ? `${Math.abs(c.balance)} TL Alacak` : `Hesap Sıfır`);
+                
+                let historyList = '';
+                if (c.history && c.history.length > 0) {
+                    c.history.forEach(h => {
+                        let isB = h.type === 'borc';
+                        historyList += `<li>[${h.date}] - ${isB ? 'Borç Eklendi: +' + h.amount + ' TL' : 'Ödeme Alındı: -' + h.amount + ' TL'}</li>`;
+                    });
+                } else {
+                    historyList = '<li>İşlem geçmişi bulunmuyor.</li>';
+                }
+
+                customersHtml += `
+                    <div style="border-bottom: 1px solid #ccc; padding-bottom: 10px; margin-bottom: 10px;">
+                        <p><b>${index + 1}. Müşteri:</b> ${c.name} | <b>Müşteri No:</b> ${c.customerId} | <b>Tel:</b> ${c.phone} | <b>TC:</b> ${c.tcNo}</p>
+                        <p><b>Güncel Bakiye:</b> ${bText}</p>
+                        <div style="font-size: 13px; color: #444; margin-left: 15px;">
+                            <b>İşlem Hareketleri:</b>
+                            <ul>${historyList}</ul>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+
+        printArea.innerHTML = `
+            <div style="text-align: center; border-bottom: 2px solid #333; padding-bottom: 10px; margin-bottom: 20px;">
+                <h1 style="margin: 0; color: #2c3e50;">${targetSeller.storeName} - Cari Hesap ve Defter Özeti</h1>
+                <p style="margin: 5px 0 0 0; font-size: 14px; color: #666;">Rapor Tarihi: ${new Date().toLocaleString('tr-TR')}</p>
+            </div>
+            <div style="margin-bottom: 20px; background: #f8f9fa; padding: 10px; border-radius: 5px;">
+                <p><b>Toplam Alacak:</b> <span style="color:var(--danger);">${totalBorc} TL</span> | <b>Toplam Borç / Emanet:</b> <span style="color:var(--success);">${totalAlacak} TL</span></p>
+            </div>
+            <h3>Müşteri Listesi ve Detayları</h3>
+            <div>${customersHtml}</div>
+            <div style="margin-top: 40px; text-align: center; font-size: 12px; color: #7f8c8d; border-top: 1px dashed #ccc; padding-top: 10px;">
+                Dijital Esnaf Defteri Sistemi Tarafından Üretilmiştir.
+            </div>
+        `;
+
+        window.print();
     }
 
     // --- SATICI GİRİŞ VE PANEL İŞLEMLERİ ---
@@ -636,7 +719,7 @@
         if (!tcNo) { tcInput.classList.add('error-input'); hasError = true; }
 
         if (hasError) {
-            showModal("Eksik Bilgi", "Lütfen zorunlu olan Müşteri Adı, Telefon Numarası ve TC Kimlik Numarası alanlarını doldurun.", "alert");
+            showModal("Eksik Bilgi", "Lütfen zorunlu alanları doldurun.", "alert");
             return;
         }
 
@@ -645,7 +728,7 @@
 
         customers.push({
             id: Date.now(),
-            sellerId: currentLoggedInSeller.id, // Hangi satıcıya ait olduğu
+            sellerId: currentLoggedInSeller.id,
             customerId: newCustomerId,
             name: name,
             phone: phone,
@@ -694,8 +777,7 @@
         if (!customer) return;
 
         if (customer.balance !== 0) {
-            let durumMetni = customer.balance > 0 ? "borcu bulunmaktadır" : "alacağı bulunmaktadır";
-            showModal("Silme İşlemi Başarısız", `Bu müşterinin aktif ${Math.abs(customer.balance)} TL ${durumMetni}. Bakiyesi 0 olmayan müşteriler silinemez!`, "alert");
+            showModal("Silme İşlemi Başarısız", `Bu müşterinin aktif ${Math.abs(customer.balance)} TL bakiyesi var. Bakiyesi 0 olmayan müşteriler silinemez!`, "alert");
         } else {
             showModal("Müşteri Silme", `"${customer.name}" adlı müşteriyi silmek istediğinize emin misiniz?`, "confirm_customer_delete", id);
         }
@@ -736,7 +818,6 @@
     function openCredentialsModal() {
         const container = document.getElementById('credentialsListContainer');
         container.innerHTML = '';
-
         let sellerCustomers = customers.filter(c => c.sellerId === currentLoggedInSeller.id);
 
         if (sellerCustomers.length === 0) {
@@ -774,14 +855,13 @@
 
     function sendWhatsApp(name, phone, balance, customerId) {
         if (!phone) {
-            showModal("Uyarı", "Bu müşteriye ait telefon numarası kayıtlı değil.", "alert");
+            showModal("Uyarı", "Telefon numarası yok.", "alert");
             return;
         }
         let formattedPhone = phone.startsWith('0') ? '9' + phone : phone;
         let durum = balance > 0 ? `${balance} TL borcunuz` : `${Math.abs(balance)} TL alacağınız`;
-        let text = `Sayın ${name} (Müşteri No: ${customerId}), cari hesap bakiyenizde ${durum} bulunmaktadır. Bilgi amaçlı hatırlatmak isteriz. İyi günler dileriz.`;
-        let url = `https://wa.me/${formattedPhone}?text=${encodeURIComponent(text)}`;
-        window.open(url, '_blank');
+        let text = `Sayın ${name} (Müşteri No: ${customerId}), cari hesap bakiyenizde ${durum} bulunmaktadır. Bilgi amaçlı hatırlatmak isteriz.`;
+        window.open(`https://wa.me/${formattedPhone}?text=${encodeURIComponent(text)}`, '_blank');
     }
 
     function renderSellerPanel() {
@@ -791,7 +871,6 @@
         listEl.innerHTML = '';
 
         let sellerCustomers = customers.filter(c => c.sellerId === currentLoggedInSeller.id);
-
         let totalB = 0;
         let totalA = 0;
 
@@ -852,11 +931,11 @@
 
         if (found) {
             document.getElementById('loginUsername').value = '';
-            document.getElementById('loginPassword').value = '';
+            document.getElementById('loginPassword').value = ''.trim();
             renderCustomerPortal(found);
             showScreen('customerPanelScreen');
         } else {
-            showModal("Giriş Başarısız", "Girdiğiniz kullanıcı adı veya şifre hatalı, ya da esnaf tarafından giriş yetkiniz kaldırılmış/silinmiş olabilir.", "alert");
+            showModal("Giriş Başarısız", "Girdiğiniz kullanıcı adı veya şifre hatalı.", "alert");
         }
     }
 
