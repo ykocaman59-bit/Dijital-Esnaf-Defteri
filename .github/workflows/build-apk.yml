@@ -21,7 +21,7 @@ jobs:
       run: |
         npm init -y
         npm install @capacitor/core @capacitor/cli @capacitor/android
-        npx cap init "Esnaf Defteri" "com.esnaf.defteri" --web-dir .
+        npx cap init "Esnaf Defteri" "com.esnaf.defteri" --web-dir www
         npx cap add android
 
     - name: JDK (Java Development Kit) Kurulumu
