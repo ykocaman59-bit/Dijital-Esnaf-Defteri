@@ -17,29 +17,26 @@ jobs:
       with:
         node-version: 18
 
-    - name: Capacitor ve Proje Hazırlığı
+    - name: Paketleri Kur ve Projeyi Senkronize Et
       run: |
-        npm init -y
-        npm install @capacitor/core @capacitor/cli @capacitor/android
-        npx cap init "Esnaf Defteri" "com.esnaf.defteri" --web-dir www
-        npx cap add android
+        npm install
         npx cap sync android
 
-    - name: JDK (Java Development Kit) Kurulumu
+    - name: JDK 11 Kurulumu
       uses: actions/setup-java@v3
       with:
         distribution: 'temurin'
-        java-version: '17'
+        java-version: '11'
 
     - name: APK Derleme (Gradle)
       run: |
         cd android
         chmod +x gradlew
-        ./gradlew assembleDebug
+        ./gradlew assembleDebug --no-daemon
 
     - name: APK Dosyasını Kaydet
       uses: actions/upload-artifact@v4
       with:
-        name: esnaf-defetari-apk
+        name: dijital-esnaf-defteri-apk
         path: android/app/build/outputs/apk/debug/app-debug.apk
         
