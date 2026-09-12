@@ -4,8 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dijital Esnaf Defteri</title>
-    <!-- Supabase CDN Kütüphanesi -->
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         :root {
             --primary: #2c3e50;
@@ -133,14 +131,10 @@
         }
 
         /* Ekran Yönetimi */
-        .screen {
-            display: none;
-        }
-        .screen.active {
-            display: block;
-        }
+        .screen { display: none; }
+        .screen.active { display: block; }
 
-        /* Splash Ekranı Animasyonu */
+        /* Splash (Açılış Animasyonu) Ekranı */
         #splashScreen {
             position: fixed;
             top: 0; left: 0; width: 100%; height: 100%;
@@ -178,7 +172,7 @@
             letter-spacing: 1px;
         }
 
-        /* Giriş Ekranı Kartları */
+        /* Rol Seçim ve Giriş Kutuları */
         .role-selection {
             display: flex;
             flex-direction: column;
@@ -194,15 +188,9 @@
             font-weight: bold;
             color: white;
             box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-            transition: transform 0.2s;
         }
-        .role-btn:active {
-            transform: scale(0.98);
-        }
-        .btn-seller { background-color: #2c3e50; }
-        .btn-customer { background-color: #27ae60; }
-
-        /* Login Formları */
+        .btn-seller-role { background-color: #2c3e50; }
+        .btn-customer-role { background-color: #27ae60; }
         .login-box {
             background: #fff;
             padding: 20px;
@@ -220,7 +208,7 @@
             cursor: pointer;
         }
 
-        /* Özel Modal (Pop-up) Tasarımları */
+        /* Modal Tasarımları */
         .modal-overlay {
             position: fixed;
             top: 0; left: 0; width: 100%; height: 100%;
@@ -246,37 +234,11 @@
             box-shadow: 0 4px 15px rgba(0,0,0,0.2);
             text-align: center;
         }
-        .modal-box h3 {
-            margin-top: 0;
-            color: var(--primary);
-        }
-        .modal-box p {
-            font-size: 15px;
-            color: #555;
-            margin-bottom: 20px;
-        }
-        .modal-buttons {
-            display: flex;
-            gap: 10px;
-            justify-content: center;
-        }
-        .modal-buttons button {
-            margin-top: 0;
-            width: auto;
-            padding: 10px 20px;
-        }
-        .btn-cancel {
-            background-color: #95a5a6;
-        }
-        .transaction-history {
-            background: #fafafa;
-            border: 1px solid #eee;
-            border-radius: 6px;
-            padding: 10px;
-            margin-top: 8px;
-            font-size: 13px;
-            text-align: left;
-        }
+        .modal-box h3 { margin-top: 0; color: var(--primary); }
+        .modal-box p { font-size: 15px; color: #555; margin-bottom: 20px; }
+        .modal-buttons { display: flex; gap: 10px; justify-content: center; }
+        .modal-buttons button { margin-top: 0; width: auto; padding: 10px 20px; }
+        .btn-cancel { background-color: #95a5a6; }
     </style>
 </head>
 <body>
@@ -287,18 +249,18 @@
     <div class="splash-title">Dijital Esnaf Defteri</div>
 </div>
 
-<!-- 1. GİRİŞ SEÇİM EKRANI -->
+<!-- 1. GİRİŞ SEÇİM EKRANI (Satıcı / Müşteri) -->
 <div id="roleSelectScreen" class="screen container" style="margin-top: 50px;">
-    <h2>Hoş Geldiniz</h2>
-    <p style="text-align: center; color: #666; margin-bottom: 30px;">Lütfen devam etmek istediğiniz rolü seçin</p>
+    <h2>Dijital Esnaf Defteri</h2>
+    <p style="text-align: center; color: #666; margin-bottom: 30px;">Lütfen giriş türünüzü seçin</p>
     <div class="role-selection">
-        <button class="role-btn btn-seller" onclick="showScreen('sellerLoginScreen')">Satıcı Girişi</button>
-        <button class="role-btn btn-customer" onclick="handleCustomerGoogleLogin()">Müşteri Girişi (Google ile)</button>
+        <button class="role-btn btn-seller-role" onclick="showScreen('sellerLoginScreen')">Satıcı Girişi</button>
+        <button class="role-btn btn-customer-role" onclick="showScreen('customerLoginScreen')">Müşteri Girişi</button>
     </div>
 </div>
 
-<!-- 2. SATICI GİRİŞ PANELİ -->
-<div id="sellerLoginScreen" class="screen container">
+<!-- 2. SATICI ŞİFRE GİRİŞ EKRANI -->
+<div id="sellerLoginScreen" class="screen container" style="margin-top: 30px;">
     <a class="back-link" onclick="showScreen('roleSelectScreen')">← Geri Dön</a>
     <div class="login-box">
         <h3>Satıcı Girişi</h3>
@@ -308,11 +270,22 @@
     </div>
 </div>
 
-<!-- 3. SATICI ANA PANELİ (ESKİ EKRAN + SUPABASE) -->
+<!-- 3. MÜŞTERİ GMAİL GİRİŞ EKRANI -->
+<div id="customerLoginScreen" class="screen container" style="margin-top: 30px;">
+    <a class="back-link" onclick="showScreen('roleSelectScreen')">← Geri Dön</a>
+    <div class="login-box">
+        <h3>Müşteri Girişi</h3>
+        <p style="font-size: 13px; color: #666; text-align: center;">Kayıt olurken verdiğiniz Gmail adresinizi yazın.</p>
+        <input type="email" id="customerEmailInput" placeholder="ornek@gmail.com">
+        <button onclick="loginCustomer()" style="background-color: var(--success);">Hesabımı Gör</button>
+    </div>
+</div>
+
+<!-- 4. SATICI ANA PANELİ -->
 <div id="sellerPanelScreen" class="screen container">
     <div style="display: flex; justify-content: space-between; align-items: center;">
         <h2>Satıcı Paneli</h2>
-        <button onclick="showScreen('roleSelectScreen')" style="width: auto; padding: 6px 12px; background-color: #e74c3c; font-size: 13px;">Çıkış</button>
+        <button onclick="showScreen('roleSelectScreen')" style="width: auto; padding: 6px 12px; background-color: #e74c3c; font-size: 13px; margin-top:0;">Çıkış</button>
     </div>
 
     <div class="summary-box">
@@ -324,7 +297,7 @@
         <h3>Yeni Müşteri Ekle</h3>
         <input type="text" id="name" placeholder="Müşteri Adı Soyadı">
         <input type="tel" id="phone" placeholder="Telefon Numarası (05XXXXXXXXX)">
-        <input type="email" id="email" placeholder="Google Gmail Adresi (ornek@gmail.com)">
+        <input type="email" id="customerEmail" placeholder="Müşteri Gmail Adresi (örn: ykocaman59@gmail.com)">
         <input type="number" id="amount" placeholder="Tutar (TL)">
         <select id="type">
             <option value="borc">Borç Yaz (Müşteri Borçlandı)</option>
@@ -337,13 +310,11 @@
     <div id="customerList"></div>
 </div>
 
-<!-- 4. MÜŞTERİ PANELİ (GİRİŞ YAPAN MÜŞTERİNİN EKRANI) -->
+<!-- 5. MÜŞTERİ ÖZET PANELİ -->
 <div id="customerPanelScreen" class="screen container">
-    <a class="back-link" onclick="showScreen('roleSelectScreen')">← Çıkış Yap / Değiştir</a>
+    <a class="back-link" onclick="showScreen('roleSelectScreen')">← Çıkış Yap</a>
     <h2>Cari Hesap Özetim</h2>
-    <div id="customerPortalContent">
-        <!-- Dinamik olarak müşteri detayları buraya gelecek -->
-    </div>
+    <div id="customerPortalContent"></div>
 </div>
 
 <!-- ÖZEL MODAL PENCERE -->
@@ -356,14 +327,7 @@
 </div>
 
 <script>
-    // Supabase Bağlantı Bilgileri
-    const SUPABASE_URL = 'https://dydtbrmbddulnzafqaat.supabase.co';
-    const SUPABASE_KEY = 'sb_publishable_flXDxjWy_xOP9pVvYjAlGg_aEh1z6xJ';
-    
-    const { createClient } = supabase;
-    const _supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
-
-    let customers = [];
+    let customers = JSON.parse(localStorage.getItem('esnaf_customers')) || [];
     let selectedCustomerId = null;
 
     // Uygulama Açılış Animasyonu (Splash Screen)
@@ -383,90 +347,9 @@
         document.getElementById(screenId).classList.add('active');
     }
 
-    // Verileri Supabase'den Çek
-    async function fetchCustomers() {
-        const { data, error } = await _supabase
-            .from('customers')
-            .select('*')
-            .order('created_at', { ascending: false });
-
-        if (error) {
-            console.error('Veri çekme hatası:', error.message);
-            showModal("Hata", "Müşteri listesi yüklenirken bir hata oluştu.", "alert");
-        } else {
-            customers = data || [];
-            render();
-        }
-    }
-
-    // Satıcı Giriş Kontrolü
-    function loginSeller() {
-        const user = document.getElementById('sellerUser').value.trim();
-        const pass = document.getElementById('sellerPass').value.trim();
-
-        if (user === 'admin' && pass === '1234') {
-            document.getElementById('sellerUser').value = '';
-            document.getElementById('sellerPass').value = '';
-            showScreen('sellerPanelScreen');
-            fetchCustomers();
-        } else {
-            showModal("Hatalı Giriş", "Kullanıcı adı (admin) veya şifre (1234) hatalı!", "alert");
-        }
-    }
-
-    // Gerçekçi Google Hesap Seçim Simülasyonu / Entegrasyonu
-    async function handleCustomerGoogleLogin() {
-        // Supabase verilerini güncel tutmak için çekelim
-        const { data, error } = await _supabase.from('customers').select('*');
-        if (error) {
-            showModal("Hata", "Sunucuya bağlanılamadı.", "alert");
-            return;
-        }
-        customers = data || [];
-
-        if (customers.length === 0.0 || customers.length === 0) {
-            showModal("Kayıt Bulunamadı", "Sistemde henüz kayıtlı müşteri bulunmamaktadır.", "alert");
-            return;
-        }
-
-        // Tarayıcıdaki gerçek Google hesap e-postalarını simüle eden veya prompt ile alan yapı
-        let promptList = customers.map((c, index) => `${index + 1}. ${c.name} (${c.email || 'E-posta yok'})`).join('\n');
-        let selectedInput = prompt(`Google Hesabı Seçin / Girin:\n\nSistemde kayıtlı maillerden test etmek için birini yazın:\n${promptList}\n\nE-posta adresinizi giriniz:`);
-
-        if (!selectedInput) return;
-
-        let foundCustomer = customers.find(c => c.email && c.email.toLowerCase() === selectedInput.trim().toLowerCase());
-
-        if (foundCustomer) {
-            renderCustomerPortal(foundCustomer);
-            showScreen('customerPanelScreen');
-        } else {
-            showModal("Kayıt Bulunamadı", "Girdiğiniz Gmail adresi ile eşleşen bir satıcı kaydı bulunmamaktadır!", "alert");
-        }
-    }
-
-    function renderCustomerPortal(c) {
-        const portal = document.getElementById('customerPortalContent');
-        let balanceClass = c.balance > 0 ? 'borc' : (c.balance < 0 ? 'alacak' : '');
-        let balanceText = c.balance > 0 ? `${c.balance} TL Borçlusunuz` : (c.balance < 0 ? `${Math.abs(c.balance)} TL Alacaklısınız` : `Hesabınız Kapalı / Sıfır`);
-        let displayId = c.customer_id || 'ID Yok';
-
-        portal.innerHTML = `
-            <div class="card">
-                <h3>Sayın ${c.name}</h3>
-                <div class="customer-id">Müşteri No: ${displayId}</div>
-                <div style="margin: 10px 0; font-size: 15px;">E-posta: <b>${c.email || 'Belirtilmemiş'}</b></div>
-                <div style="margin: 10px 0; font-size: 15px;">Telefon: <b>${c.phone || 'Belirtilmemiş'}</b></div>
-                <hr style="border:0; border-top:1px solid #eee; margin:15px 0;">
-                <div style="font-size: 16px; margin-bottom: 5px;">Güncel Durumunuz:</div>
-                <span class="balance ${balanceClass}" style="font-size: 20px;">${balanceText}</span>
-                
-                <div class="transaction-history">
-                    <strong>Cari İşlem Detayı:</strong>
-                    <p style="margin: 8px 0 0 0; color: #555;">Kayıtlı toplam bakiye hareketiniz yukarıda belirtilmiştir. Soru ve ödemeleriniz için satıcınızla iletişime geçebilirsiniz.</p>
-                </div>
-            </div>
-        `;
+    function saveData() {
+        localStorage.setItem('esnaf_customers', JSON.stringify(customers));
+        render();
     }
 
     function generateUniqueCustomerId() {
@@ -474,12 +357,12 @@
         let exists = true;
         while (exists) {
             uniqueId = Math.floor(1000000000 + Math.random() * 9000000000).toString();
-            exists = customers.some(c => c.customer_id === uniqueId);
+            exists = customers.some(c => c.customerId === uniqueId);
         }
         return uniqueId;
     }
 
-    function showModal(title, text, type, dbId = null) {
+    function showModal(title, text, type, customerId = null) {
         const overlay = document.getElementById('customModal');
         const titleEl = document.getElementById('modalTitle');
         const textEl = document.getElementById('modalText');
@@ -490,7 +373,7 @@
         buttonsEl.innerHTML = '';
 
         if (type === 'confirm') {
-            selectedCustomerId = dbId;
+            selectedCustomerId = customerId;
             buttonsEl.innerHTML = `
                 <button class="btn-cancel" onclick="closeModal()">İptal</button>
                 <button style="background-color: var(--danger);" onclick="confirmDelete()">Evet, Sil</button>
@@ -506,10 +389,61 @@
         selectedCustomerId = null;
     }
 
-    async function addCustomer() {
+    // Satıcı Giriş Kontrolü
+    function loginSeller() {
+        const u = document.getElementById('sellerUser').value.trim();
+        const p = document.getElementById('sellerPass').value.trim();
+        if (u === 'admin' && p === '1234') {
+            document.getElementById('sellerUser').value = '';
+            document.getElementById('sellerPass').value = '';
+            showScreen('sellerPanelScreen');
+            render();
+        } else {
+            showModal("Hatalı Giriş", "Kullanıcı adı (admin) veya şifre (1234) hatalı!", "alert");
+        }
+    }
+
+    // Müşteri Gmail Giriş Kontrolü
+    function loginCustomer() {
+        const emailInput = document.getElementById('customerEmailInput').value.trim().toLowerCase();
+        if (!emailInput) {
+            showModal("Eksik Bilgi", "Lütfen Gmail adresinizi girin.", "alert");
+            return;
+        }
+
+        let found = customers.find(c => c.email && c.email.toLowerCase() === emailInput);
+        if (found) {
+            document.getElementById('customerEmailInput').value = '';
+            renderCustomerPortal(found);
+            showScreen('customerPanelScreen');
+        } else {
+            showModal("Kayıt Bulunamadı", "Satıcı kaydı bulunmamaktadır!", "alert");
+        }
+    }
+
+    function renderCustomerPortal(c) {
+        const portal = document.getElementById('customerPortalContent');
+        let balanceClass = c.balance > 0 ? 'borc' : (c.balance < 0 ? 'alacak' : '');
+        let balanceText = c.balance > 0 ? `${c.balance} TL Borçlusunuz` : (c.balance < 0 ? `${Math.abs(c.balance)} TL Alacaklısınız` : `Hesabınız Kapalı / Sıfır`);
+        let displayId = c.customerId || 'ID Yok';
+
+        portal.innerHTML = `
+            <div class="card">
+                <h3>Sayın ${c.name}</h3>
+                <div class="customer-id">Müşteri No: ${displayId}</div>
+                <div style="margin: 8px 0; font-size: 14px;"><b>Gmail:</b> ${c.email || 'Yok'}</div>
+                <div style="margin: 8px 0; font-size: 14px;"><b>Telefon:</b> ${c.phone || 'Yok'}</div>
+                <hr style="border:0; border-top:1px solid #eee; margin:12px 0;">
+                <div style="font-size: 15px; margin-bottom: 5px;">Güncel Bakiye Durumunuz:</div>
+                <span class="balance ${balanceClass}" style="font-size: 18px;">${balanceText}</span>
+            </div>
+        `;
+    }
+
+    function addCustomer() {
         const name = document.getElementById('name').value.trim();
         const phone = document.getElementById('phone').value.trim();
-        const email = document.getElementById('email').value.trim();
+        const email = document.getElementById('customerEmail').value.trim();
         const amount = parseFloat(document.getElementById('amount').value);
         const type = document.getElementById('type').value;
 
@@ -518,98 +452,62 @@
             return;
         }
 
-        let netAmount = type === 'borc' ? amount : -amount;
         let existing = customers.find(c => c.name.toLowerCase() === name.toLowerCase());
+        let netAmount = type === 'borc' ? amount : -amount;
 
         if (existing) {
-            let newBalance = existing.balance + netAmount;
-            let updateData = { balance: newBalance };
-            if (phone) updateData.phone = phone;
-            if (email) updateData.email = email;
-
-            const { error } = await _supabase
-                .from('customers')
-                .update(updateData)
-                .eq('id', existing.id);
-
-            if (error) {
-                showModal("Hata", "Güncelleme yapılamadı: " + error.message, "alert");
-                return;
-            }
+            existing.balance += netAmount;
+            if (phone) existing.phone = phone;
+            if (email) existing.email = email;
         } else {
             let newCustomerId = generateUniqueCustomerId();
-            const { error } = await _supabase
-                .from('customers')
-                .insert([{
-                    customer_id: newCustomerId,
-                    name: name,
-                    phone: phone,
-                    email: email,
-                    balance: netAmount
-                }]);
-
-            if (error) {
-                showModal("Hata", "Kayıt eklenemedi: " + error.message, "alert");
-                return;
-            }
+            customers.push({
+                id: Date.now(),
+                customerId: newCustomerId,
+                name: name,
+                phone: phone,
+                email: email,
+                balance: netAmount
+            });
         }
 
         document.getElementById('name').value = '';
         document.getElementById('phone').value = '';
-        document.getElementById('email').value = '';
+        document.getElementById('customerEmail').value = '';
         document.getElementById('amount').value = '';
 
-        fetchCustomers();
+        saveData();
     }
 
-    async function updateBalance(dbId, type) {
+    function updateBalance(id, type) {
         let amountStr = prompt(type === 'borc' ? "Eklenecek Borç Miktarını Girin (TL):" : "Ödenen Tutar / Alacak Miktarını Girin (TL):");
         let amount = parseFloat(amountStr);
-
         if (isNaN(amount) || amount <= 0) return;
 
-        let customer = customers.find(c => c.id === dbId);
+        let customer = customers.find(c => c.id === id);
         if (customer) {
-            let newBalance = customer.balance + (type === 'borc' ? amount : -amount);
-
-            const { error } = await _supabase
-                .from('customers')
-                .update({ balance: newBalance })
-                .eq('id', dbId);
-
-            if (error) {
-                showModal("Hata", "Bakiye güncellenemedi: " + error.message, "alert");
-            } else {
-                fetchCustomers();
-            }
+            customer.balance += (type === 'borc' ? amount : -amount);
+            saveData();
         }
     }
 
-    function promptDelete(dbId) {
-        let customer = customers.find(c => c.id === dbId);
+    function promptDelete(id) {
+        let customer = customers.find(c => c.id === id);
         if (!customer) return;
 
         if (customer.balance !== 0) {
             let durumMetni = customer.balance > 0 ? "borcu bulunmaktadır" : "alacağı bulunmaktadır";
             showModal("Silme İşlemi Başarısız", `Bu müşterinin aktif ${Math.abs(customer.balance)} TL ${durumMetni}. Bakiyesi 0 olmayan müşteriler silinemez!`, "alert");
         } else {
-            showModal("Müşteri Silme", `"${customer.name}" adlı müşteriyi silmek istediğinize emin misiniz?`, "confirm", dbId);
+            showModal("Müşteri Silme", `"${customer.name}" adlı müşteriyi silmek istediğinize emin misiniz?`, "confirm", id);
         }
     }
 
-    async function confirmDelete() {
+    function confirmDelete() {
         if (selectedCustomerId !== null) {
-            const { error } = await _supabase
-                .from('customers')
-                .delete()
-                .eq('id', selectedCustomerId);
-
-            if (error) {
-                showModal("Hata", "Silme işlemi başarısız: " + error.message, "alert");
-            } else {
-                fetchCustomers();
-                closeModal();
-            }
+            customers = customers.filter(c => c.id !== selectedCustomerId);
+            saveData();
+            closeModal();
         }
     }
 
@@ -645,26 +543,26 @@
             if (c.balance < 0) totalA += Math.abs(c.balance);
 
             let balanceClass = c.balance > 0 ? 'borc' : (c.balance < 0 ? 'alacak' : '');
-            let balanceText = c.balance > 0 ? `${c.balance} TL Borçlu` : (c.balance < 0 ? `${Math.abs(c.balance)} ` : `Hesap Kapalı`);
-            let displayId = c.customer_id || 'ID Yok';
+            let balanceText = c.balance > 0 ? `${c.balance} TL Borçlu` : (c.balance < 0 ? `${Math.abs(c.balance)} TL Alacaklı` : `Hesap Kapalı`);
+            let displayId = c.customerId || 'ID Yok';
 
             let div = document.createElement('div');
             div.className = 'customer-item';
             div.innerHTML = `
                 <div class="info" style="width:100%;">
                     <h4>${c.name}</h4>
-                    <div class="customer-id">Müşteri No: ${displayId} | E-posta: ${c.email || 'Yok'}</div>
+                    <div class="customer-id">Müşteri No: ${displayId} | ${c.email || 'Gmail yok'}</div>
                     <span class="balance ${balanceClass}">${balanceText}</span>
                     <div style="font-size:12px; color:#666; margin-top:3px;">Tel: ${c.phone || 'Yok'}</div>
                     <div class="actions">
-                        <button onclick="updateBalance('${c.id}', 'borc')">+ Borç</button>
-                        <button onclick="updateBalance('${c.id}', 'alacak')" style="background-color:var(--success)">+ Ödeme</button>
+                        <button onclick="updateBalance(${c.id}, 'borc')">+ Borç</button>
+                        <button onclick="updateBalance(${c.id}, 'alacak')" style="background-color:var(--success)">+ Ödeme</button>
                         ${c.phone ? `<button class="btn-wa" onclick="sendWhatsApp('${c.name}', '${c.phone}', ${c.balance}, '${displayId}')">WhatsApp</button>` : ''}
-                        <button class="btn-del" onclick="promptDelete('${c.id}')">Sil</button>
+                        <button class="btn-del" onclick="promptDelete(${c.id})">Sil</button>
                     </div>
                 </div>
             `;
-            listEl.appendChild(dbId => {}, listEl.appendChild(div));
+            listEl.appendChild(div);
         });
 
         document.getElementById('totalBorc').innerText = totalB + ' TL';
