@@ -208,7 +208,7 @@
             cursor: pointer;
         }
 
-        /* Modal Tasarımları */
+        /* Özel Modal Tasarımları (Önceki Şık Versiyon) */
         .modal-overlay {
             position: fixed;
             top: 0; left: 0; width: 100%; height: 100%;
@@ -362,6 +362,7 @@
         return uniqueId;
     }
 
+    // İstediğin Şık Modal Yapısı
     function showModal(title, text, type, customerId = null) {
         const overlay = document.getElementById('customModal');
         const titleEl = document.getElementById('modalTitle');
