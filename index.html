@@ -132,6 +132,95 @@
             margin-top: 5px;
         }
 
+        /* Ekran Yönetimi */
+        .screen {
+            display: none;
+        }
+        .screen.active {
+            display: block;
+        }
+
+        /* Splash Ekranı Animasyonu */
+        #splashScreen {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: #2c3e50;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            color: white;
+            transition: opacity 0.5s ease;
+        }
+        .splash-logo {
+            width: 100px;
+            height: 100px;
+            background: white;
+            border-radius: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 40px;
+            font-weight: bold;
+            color: #2c3e50;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+            animation: pulseLogo 1.5s infinite alternate;
+        }
+        @keyframes pulseLogo {
+            0% { transform: scale(0.9); opacity: 0.8; }
+            100% { transform: scale(1.1); opacity: 1; }
+        }
+        .splash-title {
+            margin-top: 20px;
+            font-size: 22px;
+            font-weight: bold;
+            letter-spacing: 1px;
+        }
+
+        /* Giriş Ekranı Kartları */
+        .role-selection {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            margin-top: 40px;
+        }
+        .role-btn {
+            padding: 20px;
+            font-size: 18px;
+            border-radius: 10px;
+            cursor: pointer;
+            border: none;
+            font-weight: bold;
+            color: white;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+            transition: transform 0.2s;
+        }
+        .role-btn:active {
+            transform: scale(0.98);
+        }
+        .btn-seller { background-color: #2c3e50; }
+        .btn-customer { background-color: #27ae60; }
+
+        /* Login Formları */
+        .login-box {
+            background: #fff;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            margin-top: 20px;
+        }
+        .back-link {
+            display: inline-block;
+            margin-bottom: 15px;
+            color: #2c3e50;
+            text-decoration: none;
+            font-weight: bold;
+            font-size: 14px;
+            cursor: pointer;
+        }
+
+        /* Özel Modal (Pop-up) Tasarımları */
         .modal-overlay {
             position: fixed;
             top: 0; left: 0; width: 100%; height: 100%;
@@ -169,19 +258,62 @@
         .modal-buttons {
             display: flex;
             gap: 10px;
+            justify-content: center;
         }
         .modal-buttons button {
             margin-top: 0;
+            width: auto;
+            padding: 10px 20px;
         }
         .btn-cancel {
             background-color: #95a5a6;
+        }
+        .transaction-history {
+            background: #fafafa;
+            border: 1px solid #eee;
+            border-radius: 6px;
+            padding: 10px;
+            margin-top: 8px;
+            font-size: 13px;
+            text-align: left;
         }
     </style>
 </head>
 <body>
 
-<div class="container">
-    <h2>Dijital Esnaf Defteri</h2>
+<!-- SPLASH EKRANI (Açılış Animasyonu) -->
+<div id="splashScreen">
+    <div class="splash-logo">ED</div>
+    <div class="splash-title">Dijital Esnaf Defteri</div>
+</div>
+
+<!-- 1. GİRİŞ SEÇİM EKRANI -->
+<div id="roleSelectScreen" class="screen container" style="margin-top: 50px;">
+    <h2>Hoş Geldiniz</h2>
+    <p style="text-align: center; color: #666; margin-bottom: 30px;">Lütfen devam etmek istediğiniz rolü seçin</p>
+    <div class="role-selection">
+        <button class="role-btn btn-seller" onclick="showScreen('sellerLoginScreen')">Satıcı Girişi</button>
+        <button class="role-btn btn-customer" onclick="handleCustomerGoogleLogin()">Müşteri Girişi (Google ile)</button>
+    </div>
+</div>
+
+<!-- 2. SATICI GİRİŞ PANELİ -->
+<div id="sellerLoginScreen" class="screen container">
+    <a class="back-link" onclick="showScreen('roleSelectScreen')">← Geri Dön</a>
+    <div class="login-box">
+        <h3>Satıcı Girişi</h3>
+        <input type="text" id="sellerUser" placeholder="Kullanıcı Adı (admin)">
+        <input type="password" id="sellerPass" placeholder="Şifre (1234)">
+        <button onclick="loginSeller()">Giriş Yap</button>
+    </div>
+</div>
+
+<!-- 3. SATICI ANA PANELİ (ESKİ EKRAN + SUPABASE) -->
+<div id="sellerPanelScreen" class="screen container">
+    <div style="display: flex; justify-content: space-between; align-items: center;">
+        <h2>Satıcı Paneli</h2>
+        <button onclick="showScreen('roleSelectScreen')" style="width: auto; padding: 6px 12px; background-color: #e74c3c; font-size: 13px;">Çıkış</button>
+    </div>
 
     <div class="summary-box">
         <div>Toplam Alacak <span id="totalBorc" class="borc">0 TL</span></div>
@@ -192,6 +324,7 @@
         <h3>Yeni Müşteri Ekle</h3>
         <input type="text" id="name" placeholder="Müşteri Adı Soyadı">
         <input type="tel" id="phone" placeholder="Telefon Numarası (05XXXXXXXXX)">
+        <input type="email" id="email" placeholder="Google Gmail Adresi (ornek@gmail.com)">
         <input type="number" id="amount" placeholder="Tutar (TL)">
         <select id="type">
             <option value="borc">Borç Yaz (Müşteri Borçlandı)</option>
@@ -204,6 +337,16 @@
     <div id="customerList"></div>
 </div>
 
+<!-- 4. MÜŞTERİ PANELİ (GİRİŞ YAPAN MÜŞTERİNİN EKRANI) -->
+<div id="customerPanelScreen" class="screen container">
+    <a class="back-link" onclick="showScreen('roleSelectScreen')">← Çıkış Yap / Değiştir</a>
+    <h2>Cari Hesap Özetim</h2>
+    <div id="customerPortalContent">
+        <!-- Dinamik olarak müşteri detayları buraya gelecek -->
+    </div>
+</div>
+
+<!-- ÖZEL MODAL PENCERE -->
 <div class="modal-overlay" id="customModal">
     <div class="modal-box">
         <h3 id="modalTitle">Uyarı</h3>
@@ -221,7 +364,24 @@
     const _supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
     let customers = [];
-    let selectedCustomerId = null; // Veritabanındaki 'id' (UUID veya integer) tutulacak
+    let selectedCustomerId = null;
+
+    // Uygulama Açılış Animasyonu (Splash Screen)
+    window.addEventListener('load', () => {
+        setTimeout(() => {
+            const splash = document.getElementById('splashScreen');
+            splash.style.opacity = '0';
+            setTimeout(() => {
+                splash.style.display = 'none';
+                showScreen('roleSelectScreen');
+            }, 500);
+        }, 1500);
+    });
+
+    function showScreen(screenId) {
+        document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+        document.getElementById(screenId).classList.add('active');
+    }
 
     // Verileri Supabase'den Çek
     async function fetchCustomers() {
@@ -237,6 +397,76 @@
             customers = data || [];
             render();
         }
+    }
+
+    // Satıcı Giriş Kontrolü
+    function loginSeller() {
+        const user = document.getElementById('sellerUser').value.trim();
+        const pass = document.getElementById('sellerPass').value.trim();
+
+        if (user === 'admin' && pass === '1234') {
+            document.getElementById('sellerUser').value = '';
+            document.getElementById('sellerPass').value = '';
+            showScreen('sellerPanelScreen');
+            fetchCustomers();
+        } else {
+            showModal("Hatalı Giriş", "Kullanıcı adı (admin) veya şifre (1234) hatalı!", "alert");
+        }
+    }
+
+    // Gerçekçi Google Hesap Seçim Simülasyonu / Entegrasyonu
+    async function handleCustomerGoogleLogin() {
+        // Supabase verilerini güncel tutmak için çekelim
+        const { data, error } = await _supabase.from('customers').select('*');
+        if (error) {
+            showModal("Hata", "Sunucuya bağlanılamadı.", "alert");
+            return;
+        }
+        customers = data || [];
+
+        if (customers.length === 0.0 || customers.length === 0) {
+            showModal("Kayıt Bulunamadı", "Sistemde henüz kayıtlı müşteri bulunmamaktadır.", "alert");
+            return;
+        }
+
+        // Tarayıcıdaki gerçek Google hesap e-postalarını simüle eden veya prompt ile alan yapı
+        let promptList = customers.map((c, index) => `${index + 1}. ${c.name} (${c.email || 'E-posta yok'})`).join('\n');
+        let selectedInput = prompt(`Google Hesabı Seçin / Girin:\n\nSistemde kayıtlı maillerden test etmek için birini yazın:\n${promptList}\n\nE-posta adresinizi giriniz:`);
+
+        if (!selectedInput) return;
+
+        let foundCustomer = customers.find(c => c.email && c.email.toLowerCase() === selectedInput.trim().toLowerCase());
+
+        if (foundCustomer) {
+            renderCustomerPortal(foundCustomer);
+            showScreen('customerPanelScreen');
+        } else {
+            showModal("Kayıt Bulunamadı", "Girdiğiniz Gmail adresi ile eşleşen bir satıcı kaydı bulunmamaktadır!", "alert");
+        }
+    }
+
+    function renderCustomerPortal(c) {
+        const portal = document.getElementById('customerPortalContent');
+        let balanceClass = c.balance > 0 ? 'borc' : (c.balance < 0 ? 'alacak' : '');
+        let balanceText = c.balance > 0 ? `${c.balance} TL Borçlusunuz` : (c.balance < 0 ? `${Math.abs(c.balance)} TL Alacaklısınız` : `Hesabınız Kapalı / Sıfır`);
+        let displayId = c.customer_id || 'ID Yok';
+
+        portal.innerHTML = `
+            <div class="card">
+                <h3>Sayın ${c.name}</h3>
+                <div class="customer-id">Müşteri No: ${displayId}</div>
+                <div style="margin: 10px 0; font-size: 15px;">E-posta: <b>${c.email || 'Belirtilmemiş'}</b></div>
+                <div style="margin: 10px 0; font-size: 15px;">Telefon: <b>${c.phone || 'Belirtilmemiş'}</b></div>
+                <hr style="border:0; border-top:1px solid #eee; margin:15px 0;">
+                <div style="font-size: 16px; margin-bottom: 5px;">Güncel Durumunuz:</div>
+                <span class="balance ${balanceClass}" style="font-size: 20px;">${balanceText}</span>
+                
+                <div class="transaction-history">
+                    <strong>Cari İşlem Detayı:</strong>
+                    <p style="margin: 8px 0 0 0; color: #555;">Kayıtlı toplam bakiye hareketiniz yukarıda belirtilmiştir. Soru ve ödemeleriniz için satıcınızla iletişime geçebilirsiniz.</p>
+                </div>
+            </div>
+        `;
     }
 
     function generateUniqueCustomerId() {
@@ -279,6 +509,7 @@
     async function addCustomer() {
         const name = document.getElementById('name').value.trim();
         const phone = document.getElementById('phone').value.trim();
+        const email = document.getElementById('email').value.trim();
         const amount = parseFloat(document.getElementById('amount').value);
         const type = document.getElementById('type').value;
 
@@ -291,10 +522,10 @@
         let existing = customers.find(c => c.name.toLowerCase() === name.toLowerCase());
 
         if (existing) {
-            // Var olan müşterinin bakiyesini güncelle
             let newBalance = existing.balance + netAmount;
             let updateData = { balance: newBalance };
             if (phone) updateData.phone = phone;
+            if (email) updateData.email = email;
 
             const { error } = await _supabase
                 .from('customers')
@@ -306,7 +537,6 @@
                 return;
             }
         } else {
-            // Yeni müşteri oluştur
             let newCustomerId = generateUniqueCustomerId();
             const { error } = await _supabase
                 .from('customers')
@@ -314,6 +544,7 @@
                     customer_id: newCustomerId,
                     name: name,
                     phone: phone,
+                    email: email,
                     balance: netAmount
                 }]);
 
@@ -325,6 +556,7 @@
 
         document.getElementById('name').value = '';
         document.getElementById('phone').value = '';
+        document.getElementById('email').value = '';
         document.getElementById('amount').value = '';
 
         fetchCustomers();
@@ -395,6 +627,7 @@
 
     function render() {
         const listEl = document.getElementById('customerList');
+        if (!listEl) return;
         listEl.innerHTML = '';
 
         let totalB = 0;
@@ -412,15 +645,15 @@
             if (c.balance < 0) totalA += Math.abs(c.balance);
 
             let balanceClass = c.balance > 0 ? 'borc' : (c.balance < 0 ? 'alacak' : '');
-            let balanceText = c.balance > 0 ? `${c.balance} TL Borçlu` : (c.balance < 0 ? `${Math.abs(c.balance)} TL Alacaklı` : `Hesap Kapalı`);
+            let balanceText = c.balance > 0 ? `${c.balance} TL Borçlu` : (c.balance < 0 ? `${Math.abs(c.balance)} ` : `Hesap Kapalı`);
             let displayId = c.customer_id || 'ID Yok';
 
             let div = document.createElement('div');
             div.className = 'customer-item';
             div.innerHTML = `
-                <div class="info">
+                <div class="info" style="width:100%;">
                     <h4>${c.name}</h4>
-                    <div class="customer-id">Müşteri No: ${displayId}</div>
+                    <div class="customer-id">Müşteri No: ${displayId} | E-posta: ${c.email || 'Yok'}</div>
                     <span class="balance ${balanceClass}">${balanceText}</span>
                     <div style="font-size:12px; color:#666; margin-top:3px;">Tel: ${c.phone || 'Yok'}</div>
                     <div class="actions">
@@ -431,15 +664,12 @@
                     </div>
                 </div>
             `;
-            listEl.appendChild(div);
+            listEl.appendChild(dbId => {}, listEl.appendChild(div));
         });
 
         document.getElementById('totalBorc').innerText = totalB + ' TL';
         document.getElementById('totalAlacak').innerText = totalA + ' TL';
     }
-
-    // Sayfa açıldığında verileri Supabase'den çek
-    fetchCustomers();
 </script>
 
 </body>
