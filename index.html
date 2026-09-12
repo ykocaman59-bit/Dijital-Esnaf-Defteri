@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dijital Esnaf Defteri</title>
+    <!-- Supabase CDN Kütüphanesi -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         :root {
             --primary: #2c3e50;
@@ -11,7 +13,6 @@
             --danger: #c0392b;
             --bg: #f5f6fa;
         }
-        /* Ekranın her yerinde yazıların kopyalanmasını ve seçilmesini engeller */
         * {
             -webkit-user-select: none;
             -moz-user-select: none;
@@ -19,7 +20,6 @@
             user-select: none;
             -webkit-touch-callout: none;
         }
-        /* Input alanlarına veri girilebilmesi için istisna tanımı */
         input, select {
             -webkit-user-select: text;
             -moz-user-select: text;
@@ -132,7 +132,6 @@
             margin-top: 5px;
         }
 
-        /* Özel Modal (Pop-up) Tasarımları */
         .modal-overlay {
             position: fixed;
             top: 0; left: 0; width: 100%; height: 100%;
@@ -205,41 +204,52 @@
     <div id="customerList"></div>
 </div>
 
-<!-- ÖZEL MODAL PENCERE -->
 <div class="modal-overlay" id="customModal">
     <div class="modal-box">
         <h3 id="modalTitle">Uyarı</h3>
         <p id="modalText">Mesaj içeriği buraya gelecek.</p>
-        <div class="modal-buttons" id="modalButtons">
-            <!-- Butonlar JavaScript ile dinamik eklenecek -->
-        </div>
+        <div class="modal-buttons" id="modalButtons"></div>
     </div>
 </div>
 
 <script>
-    let customers = JSON.parse(localStorage.getItem('esnaf_customers')) || [];
-    let selectedCustomerId = null;
+    // Supabase Bağlantı Bilgileri
+    const SUPABASE_URL = 'https://dydtbrmbddulnzafqaat.supabase.co';
+    const SUPABASE_KEY = 'sb_publishable_flXDxjWy_xOP9pVvYjAlGg_aEh1z6xJ';
+    
+    const { createClient } = supabase;
+    const _supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
-    function saveData() {
-        localStorage.setItem('esnaf_customers', JSON.stringify(customers));
-        render();
+    let customers = [];
+    let selectedCustomerId = null; // Veritabanındaki 'id' (UUID veya integer) tutulacak
+
+    // Verileri Supabase'den Çek
+    async function fetchCustomers() {
+        const { data, error } = await _supabase
+            .from('customers')
+            .select('*')
+            .order('created_at', { ascending: false });
+
+        if (error) {
+            console.error('Veri çekme hatası:', error.message);
+            showModal("Hata", "Müşteri listesi yüklenirken bir hata oluştu.", "alert");
+        } else {
+            customers = data || [];
+            render();
+        }
     }
 
-    // Benzersiz 10 haneli rastgele müşteri ID'si üreten fonksiyon
     function generateUniqueCustomerId() {
         let uniqueId;
         let exists = true;
-        
         while (exists) {
-            // 10 haneli rastgele sayı üretir (Örn: 4829103756)
             uniqueId = Math.floor(1000000000 + Math.random() * 9000000000).toString();
-            // Bu numaranın daha önce başka bir müşteriye verilip verilmediğini kontrol et
-            exists = customers.some(c => c.customerId === uniqueId);
+            exists = customers.some(c => c.customer_id === uniqueId);
         }
         return uniqueId;
     }
 
-    function showModal(title, text, type, customerId = null) {
+    function showModal(title, text, type, dbId = null) {
         const overlay = document.getElementById('customModal');
         const titleEl = document.getElementById('modalTitle');
         const textEl = document.getElementById('modalText');
@@ -250,15 +260,13 @@
         buttonsEl.innerHTML = '';
 
         if (type === 'confirm') {
-            selectedCustomerId = customerId;
+            selectedCustomerId = dbId;
             buttonsEl.innerHTML = `
                 <button class="btn-cancel" onclick="closeModal()">İptal</button>
                 <button style="background-color: var(--danger);" onclick="confirmDelete()">Evet, Sil</button>
             `;
         } else {
-            buttonsEl.innerHTML = `
-                <button onclick="closeModal()">Tamam</button>
-            `;
+            buttonsEl.innerHTML = `<button onclick="closeModal()">Tamam</button>`;
         }
         overlay.classList.add('active');
     }
@@ -268,7 +276,7 @@
         selectedCustomerId = null;
     }
 
-    function addCustomer() {
+    async function addCustomer() {
         const name = document.getElementById('name').value.trim();
         const phone = document.getElementById('phone').value.trim();
         const amount = parseFloat(document.getElementById('amount').value);
@@ -279,62 +287,97 @@
             return;
         }
 
-        let existing = customers.find(c => c.name.toLowerCase() === name.toLowerCase());
         let netAmount = type === 'borc' ? amount : -amount;
+        let existing = customers.find(c => c.name.toLowerCase() === name.toLowerCase());
 
         if (existing) {
-            // Aynı isimli müşteri zaten varsa bakiyesini güncelle, ID'si kalsın
-            existing.balance += netAmount;
-            if(phone) existing.phone = phone;
+            // Var olan müşterinin bakiyesini güncelle
+            let newBalance = existing.balance + netAmount;
+            let updateData = { balance: newBalance };
+            if (phone) updateData.phone = phone;
+
+            const { error } = await _supabase
+                .from('customers')
+                .update(updateData)
+                .eq('id', existing.id);
+
+            if (error) {
+                showModal("Hata", "Güncelleme yapılamadı: " + error.message, "alert");
+                return;
+            }
         } else {
-            // Yeni müşteri ise ona özel 10 haneli rastgele kimlik numarası ata
+            // Yeni müşteri oluştur
             let newCustomerId = generateUniqueCustomerId();
-            customers.push({
-                id: Date.now(),
-                customerId: newCustomerId,
-                name: name,
-                phone: phone,
-                balance: netAmount
-            });
+            const { error } = await _supabase
+                .from('customers')
+                .insert([{
+                    customer_id: newCustomerId,
+                    name: name,
+                    phone: phone,
+                    balance: netAmount
+                }]);
+
+            if (error) {
+                showModal("Hata", "Kayıt eklenemedi: " + error.message, "alert");
+                return;
+            }
         }
 
         document.getElementById('name').value = '';
         document.getElementById('phone').value = '';
         document.getElementById('amount').value = '';
 
-        saveData();
+        fetchCustomers();
     }
 
-    function updateBalance(id, type) {
+    async function updateBalance(dbId, type) {
         let amountStr = prompt(type === 'borc' ? "Eklenecek Borç Miktarını Girin (TL):" : "Ödenen Tutar / Alacak Miktarını Girin (TL):");
         let amount = parseFloat(amountStr);
 
         if (isNaN(amount) || amount <= 0) return;
 
-        let customer = customers.find(c => c.id === id);
+        let customer = customers.find(c => c.id === dbId);
         if (customer) {
-            customer.balance += (type === 'borc' ? amount : -amount);
-            saveData();
+            let newBalance = customer.balance + (type === 'borc' ? amount : -amount);
+
+            const { error } = await _supabase
+                .from('customers')
+                .update({ balance: newBalance })
+                .eq('id', dbId);
+
+            if (error) {
+                showModal("Hata", "Bakiye güncellenemedi: " + error.message, "alert");
+            } else {
+                fetchCustomers();
+            }
         }
     }
 
-    function promptDelete(id) {
-        let customer = customers.find(c => c.id === id);
+    function promptDelete(dbId) {
+        let customer = customers.find(c => c.id === dbId);
         if (!customer) return;
 
         if (customer.balance !== 0) {
             let durumMetni = customer.balance > 0 ? "borcu bulunmaktadır" : "alacağı bulunmaktadır";
-            showModal("Silme İşlemi Başarısız", `Bu müşterinin aktif ${Math.abs(customer.balance)} TL ${durumMetni}. Bakiyesi 0 (sıfır) olmayan müşteriler silinemez! Önce hesabı kapatmalısınız.`, "alert");
+            showModal("Silme İşlemi Başarısız", `Bu müşterinin aktif ${Math.abs(customer.balance)} TL ${durumMetni}. Bakiyesi 0 olmayan müşteriler silinemez!`, "alert");
         } else {
-            showModal("Müşteri Silme", `"${customer.name}" adlı müşteriyi silmek istediğinize emin misiniz?`, "confirm", id);
+            showModal("Müşteri Silme", `"${customer.name}" adlı müşteriyi silmek istediğinize emin misiniz?`, "confirm", dbId);
         }
     }
 
-    function confirmDelete() {
+    async function confirmDelete() {
         if (selectedCustomerId !== null) {
-            customers = customers.filter(c => c.id !== selectedCustomerId);
-            saveData();
-            closeModal();
+            const { error } = await _supabase
+                .from('customers')
+                .delete()
+                .eq('id', selectedCustomerId);
+
+            if (error) {
+                showModal("Hata", "Silme işlemi başarısız: " + error.message, "alert");
+            } else {
+                fetchCustomers();
+                closeModal();
+            }
         }
     }
 
@@ -370,9 +413,7 @@
 
             let balanceClass = c.balance > 0 ? 'borc' : (c.balance < 0 ? 'alacak' : '');
             let balanceText = c.balance > 0 ? `${c.balance} TL Borçlu` : (c.balance < 0 ? `${Math.abs(c.balance)} TL Alacaklı` : `Hesap Kapalı`);
-            
-            // Eğer eski kayıtlarda customerId yoksa hata vermemesi için güvenlik önlemi
-            let displayId = c.customerId || 'ID Yok';
+            let displayId = c.customer_id || 'ID Yok';
 
             let div = document.createElement('div');
             div.className = 'customer-item';
@@ -383,10 +424,10 @@
                     <span class="balance ${balanceClass}">${balanceText}</span>
                     <div style="font-size:12px; color:#666; margin-top:3px;">Tel: ${c.phone || 'Yok'}</div>
                     <div class="actions">
-                        <button onclick="updateBalance(${c.id}, 'borc')">+ Borç</button>
-                        <button onclick="updateBalance(${c.id}, 'alacak')" style="background-color:var(--success)">+ Ödeme</button>
+                        <button onclick="updateBalance('${c.id}', 'borc')">+ Borç</button>
+                        <button onclick="updateBalance('${c.id}', 'alacak')" style="background-color:var(--success)">+ Ödeme</button>
                         ${c.phone ? `<button class="btn-wa" onclick="sendWhatsApp('${c.name}', '${c.phone}', ${c.balance}, '${displayId}')">WhatsApp</button>` : ''}
-                        <button class="btn-del" onclick="promptDelete(${c.id})">Sil</button>
+                        <button class="btn-del" onclick="promptDelete('${c.id}')">Sil</button>
                     </div>
                 </div>
             `;
@@ -397,7 +438,8 @@
         document.getElementById('totalAlacak').innerText = totalA + ' TL';
     }
 
-    render();
+    // Sayfa açıldığında verileri Supabase'den çek
+    fetchCustomers();
 </script>
 
 </body>
