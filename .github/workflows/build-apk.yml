@@ -17,25 +17,13 @@ jobs:
       with:
         node-version: 18
 
-    - name: SVG'yi PNG'ye Çevir ve Projeyi Hazırla
+    - name: Projeyi Hazırla
       run: |
         npm install
-        # Sunucuya görsel dönüştürme aracı (ImageMagick) kuruyoruz
-        sudo apt-get update && sudo apt-get install -y imagemagick
-        
-        # icon.svg dosyanı otomatik olarak icon.png formatına dönüştürüyoruz
-        if [ -f "icon.svg" ]; then
-          convert -background none icon.svg -resize 512x512 icon.png
-        elif [ -f "assets/icon.svg" ]; then
-          convert -background none assets/icon.svg -resize 512x512 assets/icon.png
-        fi
-
-        npm install -g @capacitor/assets
-        npx @capacitor/assets generate --android || true
         npx cap update android
         npx cap sync android
 
-    - name: Uygulama İsmini Güncelle
+    - name: İsmi ve Ayarları Sabitle
       run: |
         STRING_FILE="android/app/src/main/res/values/strings.xml"
         if [ -f "$STRING_FILE" ]; then
@@ -48,13 +36,13 @@ jobs:
         distribution: 'temurin'
         java-version: '11'
 
-    - name: APK Derleme (Gradle)
+    - name: APK Derle
       run: |
         cd android
         chmod +x gradlew
         ./gradlew assembleDebug --no-daemon
 
-    - name: APK Dosyasını Kaydet
+    - name: APK Kaydet
       uses: actions/upload-artifact@v4
       with:
         name: Dijital-Esnaf-Defteri
