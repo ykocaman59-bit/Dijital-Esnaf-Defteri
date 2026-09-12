@@ -17,13 +17,14 @@ jobs:
       with:
         node-version: 18
 
-    - name: Projeyi Hazırla
+    - name: Projeyi Hazırla ve Android Ekle
       run: |
         npm install
+        npx cap add android
         npx cap update android
         npx cap sync android
 
-    - name: İsmi ve Ayarları Sabitle
+    - name: İsmi Sabitle
       run: |
         STRING_FILE="android/app/src/main/res/values/strings.xml"
         if [ -f "$STRING_FILE" ]; then
