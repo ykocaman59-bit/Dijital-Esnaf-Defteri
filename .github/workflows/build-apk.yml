@@ -17,10 +17,20 @@ jobs:
       with:
         node-version: 18
 
-    - name: Projeyi Hazırla ve Android Ekle
+    - name: Projeyi Hazırla ve Logoyu Entegre Et
       run: |
         npm install
-        npx cap add android
+        npx cap add android || true
+        
+        # Eğer icon.png varsa Capacitor assets ile logoyu otomatik uygula
+        if [ -f "icon.png" ]; then
+          npm install -g @capacitor/assets
+          npx @capacitor/assets generate --android || true
+        elif [ -f "assets/icon.png" ]; then
+          npm install -g @capacitor/assets
+          npx @capacitor/assets generate --android || true
+        fi
+        
         npx cap update android
         npx cap sync android
 
@@ -37,15 +47,18 @@ jobs:
         distribution: 'temurin'
         java-version: '17'
 
-    - name: APK Derle
+    - name: APK Derle ve Yeniden Adlandır
       run: |
         cd android
         chmod +x gradlew
         ./gradlew assembleDebug --no-daemon
+        cd ..
+        # Çıkan APK dosyasını doğrudan istediğimiz isimle kopyalıyoruz
+        cp android/app/build/outputs/apk/debug/app-debug.apk Dijital-Esnaf-Defteri.apk
 
     - name: APK Kaydet
       uses: actions/upload-artifact@v4
       with:
         name: Dijital-Esnaf-Defteri
-        path: android/app/build/outputs/apk/debug/app-debug.apk
+        path: Dijital-Esnaf-Defteri.apk
         
