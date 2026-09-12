@@ -17,12 +17,13 @@ jobs:
       with:
         node-version: 18
 
-    - name: Capacitor ve Cordova Hazırlığı
+    - name: Capacitor ve Proje Hazırlığı
       run: |
         npm init -y
         npm install @capacitor/core @capacitor/cli @capacitor/android
         npx cap init "Esnaf Defteri" "com.esnaf.defteri" --web-dir www
         npx cap add android
+        npx cap sync android
 
     - name: JDK (Java Development Kit) Kurulumu
       uses: actions/setup-java@v3
@@ -39,6 +40,6 @@ jobs:
     - name: APK Dosyasını Kaydet
       uses: actions/upload-artifact@v4
       with:
-        name: esnaf-defteri-apk
+        name: esnaf-defetari-apk
         path: android/app/build/outputs/apk/debug/app-debug.apk
         
