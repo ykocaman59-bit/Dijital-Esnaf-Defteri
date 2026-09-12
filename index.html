@@ -172,7 +172,7 @@
             letter-spacing: 1px;
         }
 
-        /* Rol Seçim ve Giriş Kutuları */
+        /* Rol Seçim Kutuları */
         .role-selection {
             display: flex;
             flex-direction: column;
@@ -208,7 +208,116 @@
             cursor: pointer;
         }
 
-        /* Özel Modal Tasarımları (Önceki Şık Versiyon) */
+        /* Google Hesap Seçici Modal (Görseldeki Tasarım) */
+        .google-modal-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.6);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 2000;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+        }
+        .google-modal-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+        .google-modal-box {
+            background: #fff;
+            width: 90%;
+            max-width: 380px;
+            border-radius: 16px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            max-height: 80vh;
+        }
+        .google-modal-header {
+            padding: 15px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid #eee;
+        }
+        .google-logo-area {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 18px;
+            font-weight: 500;
+            color: #555;
+        }
+        .google-logo-area span {
+            font-weight: bold;
+            color: #4285F4;
+            font-size: 20px;
+            letter-spacing: -1px;
+        }
+        .google-close-btn {
+            background: none;
+            border: none;
+            font-size: 20px;
+            color: #666;
+            cursor: pointer;
+            width: auto;
+            padding: 0;
+            margin: 0;
+        }
+        .google-accounts-list {
+            overflow-y: auto;
+            padding: 10px 0;
+        }
+        .google-account-item {
+            display: flex;
+            align-items: center;
+            padding: 12px 20px;
+            gap: 15px;
+            cursor: pointer;
+            transition: background 0.2s;
+            border-bottom: 1px solid #f9f9f9;
+        }
+        .google-account-item:hover {
+            background-color: #f1f3f4;
+        }
+        .account-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: #2c3e50;
+            color: white;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-weight: bold;
+            font-size: 16px;
+            flex-shrink: 0;
+        }
+        .account-info {
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        .account-name {
+            font-size: 14px;
+            font-weight: 600;
+            color: #202124;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .account-email {
+            font-size: 12px;
+            color: #5f6368;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        /* Genel Uyarı Modalı */
         .modal-overlay {
             position: fixed;
             top: 0; left: 0; width: 100%; height: 100%;
@@ -216,7 +325,7 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            z-index: 1000;
+            z-index: 2500;
             opacity: 0;
             visibility: hidden;
             transition: all 0.3s ease;
@@ -239,6 +348,21 @@
         .modal-buttons { display: flex; gap: 10px; justify-content: center; }
         .modal-buttons button { margin-top: 0; width: auto; padding: 10px 20px; }
         .btn-cancel { background-color: #95a5a6; }
+
+        /* Müşteri Panel Geçmiş İşlem Kartları */
+        .transaction-history-item {
+            background: #fff;
+            padding: 10px 12px;
+            border-radius: 6px;
+            margin-bottom: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-left: 4px solid #ccc;
+            font-size: 14px;
+        }
+        .tx-borc { border-left-color: var(--danger); }
+        .tx-alacak { border-left-color: var(--success); }
     </style>
 </head>
 <body>
@@ -255,7 +379,7 @@
     <p style="text-align: center; color: #666; margin-bottom: 30px;">Lütfen giriş türünüzü seçin</p>
     <div class="role-selection">
         <button class="role-btn btn-seller-role" onclick="showScreen('sellerLoginScreen')">Satıcı Girişi</button>
-        <button class="role-btn btn-customer-role" onclick="showScreen('customerLoginScreen')">Müşteri Girişi</button>
+        <button class="role-btn btn-customer-role" onclick="openGoogleAccountSelector()">Müşteri Girişi (Gmail ile)</button>
     </div>
 </div>
 
@@ -270,18 +394,7 @@
     </div>
 </div>
 
-<!-- 3. MÜŞTERİ GMAİL GİRİŞ EKRANI -->
-<div id="customerLoginScreen" class="screen container" style="margin-top: 30px;">
-    <a class="back-link" onclick="showScreen('roleSelectScreen')">← Geri Dön</a>
-    <div class="login-box">
-        <h3>Müşteri Girişi</h3>
-        <p style="font-size: 13px; color: #666; text-align: center;">Kayıt olurken verdiğiniz Gmail adresinizi yazın.</p>
-        <input type="email" id="customerEmailInput" placeholder="ornek@gmail.com">
-        <button onclick="loginCustomer()" style="background-color: var(--success);">Hesabımı Gör</button>
-    </div>
-</div>
-
-<!-- 4. SATICI ANA PANELİ -->
+<!-- 3. SATICI ANA PANELİ -->
 <div id="sellerPanelScreen" class="screen container">
     <div style="display: flex; justify-content: space-between; align-items: center;">
         <h2>Satıcı Paneli</h2>
@@ -294,7 +407,7 @@
     </div>
 
     <div class="card">
-        <h3>Yeni Müşteri Ekle</h3>
+        <h3>Yeni Müşteri Ekle / İşlem Yap</h3>
         <input type="text" id="name" placeholder="Müşteri Adı Soyadı">
         <input type="tel" id="phone" placeholder="Telefon Numarası (05XXXXXXXXX)">
         <input type="email" id="customerEmail" placeholder="Müşteri Gmail Adresi (örn: ykocaman59@gmail.com)">
@@ -310,14 +423,32 @@
     <div id="customerList"></div>
 </div>
 
-<!-- 5. MÜŞTERİ ÖZET PANELİ -->
+<!-- 4. MÜŞTERİ ÖZET PANELİ -->
 <div id="customerPanelScreen" class="screen container">
     <a class="back-link" onclick="showScreen('roleSelectScreen')">← Çıkış Yap</a>
     <h2>Cari Hesap Özetim</h2>
     <div id="customerPortalContent"></div>
 </div>
 
-<!-- ÖZEL MODAL PENCERE -->
+<!-- GOOGLE HESAP SEÇİCİ MODAL (Görseldeki Tasarım) -->
+<div class="google-modal-overlay" id="googleAccountModal">
+    <div class="google-modal-box">
+        <div class="google-modal-header">
+            <div class="google-logo-area">
+                <span>Google</span> Hesabı
+            </div>
+            <button class="google-close-btn" onclick="closeGoogleModal()">×</button>
+        </div>
+        <div style="padding: 10px 20px 0 20px; font-size: 13px; color: #666;">
+            Devam etmek için bir Google hesabı seçin:
+        </div>
+        <div class="google-accounts-list" id="deviceAccountsList">
+            <!-- Cihazdaki / Kayıtlı Gmailler dinamik olarak buraya gelecek -->
+        </div>
+    </div>
+</div>
+
+<!-- GENEL UYARI MODALI -->
 <div class="modal-overlay" id="customModal">
     <div class="modal-box">
         <h3 id="modalTitle">Uyarı</h3>
@@ -330,7 +461,7 @@
     let customers = JSON.parse(localStorage.getItem('esnaf_customers')) || [];
     let selectedCustomerId = null;
 
-    // Uygulama Açılış Animasyonu (Splash Screen)
+    // Uygulama Açılış Animasyonu
     window.addEventListener('load', () => {
         setTimeout(() => {
             const splash = document.getElementById('splashScreen');
@@ -362,7 +493,7 @@
         return uniqueId;
     }
 
-    // İstediğin Şık Modal Yapısı
+    // Genel Uyarı / Bilgi Modali
     function showModal(title, text, type, customerId = null) {
         const overlay = document.getElementById('customModal');
         const titleEl = document.getElementById('modalTitle');
@@ -390,6 +521,61 @@
         selectedCustomerId = null;
     }
 
+    // Google Hesap Seçici Penceresini Aç
+    function openGoogleAccountSelector() {
+        const listContainer = document.getElementById('deviceAccountsList');
+        listContainer.innerHTML = '';
+
+        // Cihazda olabilecek örnek simüle edilmiş Google hesapları havuzu + sistemdeki kayıtlı olanlar
+        // Böylece test ederken hem kayıtlı hem kayıtsız gmailleri deneyebilirsin.
+        let sampleDeviceAccounts = [
+            { name: "Yusuf Kocaman", email: "ykocaman59@gmail.com" },
+            { name: "Barbar Kimya", email: "ykocaman45.yk@gmail.com" },
+            { name: "Test Deneme", email: "testhesabi@gmail.com" }
+        ];
+
+        // Ayrıca satıcının veritabanına eklediği ama listede olmayan varsa onları da ekleyelim
+        customers.forEach(c => {
+            if (c.email && !sampleDeviceAccounts.some(acc => acc.email.toLowerCase() === c.email.toLowerCase())) {
+                sampleDeviceAccounts.push({ name: c.name, email: c.email });
+            }
+        });
+
+        sampleDeviceAccounts.forEach(acc => {
+            let firstLetter = acc.name.charAt(0).toUpperCase();
+            let div = document.createElement('div');
+            div.className = 'google-account-item';
+            div.innerHTML = `
+                <div class="account-avatar">${firstLetter}</div>
+                <div class="account-info">
+                    <span class="account-name">${acc.name}</span>
+                    <span class="account-email">${acc.email}</span>
+                </div>
+            `;
+            div.onclick = () => selectGoogleAccount(acc.email);
+            listContainer.appendChild(div);
+        });
+
+        document.getElementById('googleAccountModal').classList.add('active');
+    }
+
+    function closeGoogleModal() {
+        document.getElementById('googleAccountModal').classList.remove('active');
+    }
+
+    // Google Modabından Hesap Seçildiğinde Çalışacak Mantık
+    function selectGoogleAccount(email) {
+        closeGoogleModal();
+        let found = customers.find(c => c.email && c.email.toLowerCase() === email.toLowerCase());
+
+        if (found) {
+            renderCustomerPortal(found);
+            showScreen('customerPanelScreen');
+        } else {
+            showModal("Kayıt Bulunamadı", "Seçtiğiniz (" + email + ") Google hesabına ait sistemde kayıtlı bir müşteri bulunmamaktadır.", "alert");
+        }
+    }
+
     // Satıcı Giriş Kontrolü
     function loginSeller() {
         const u = document.getElementById('sellerUser').value.trim();
@@ -404,49 +590,55 @@
         }
     }
 
-    // Müşteri Gmail Giriş Kontrolü
-    function loginCustomer() {
-        const emailInput = document.getElementById('customerEmailInput').value.trim().toLowerCase();
-        if (!emailInput) {
-            showModal("Eksik Bilgi", "Lütfen Gmail adresinizi girin.", "alert");
-            return;
-        }
-
-        let found = customers.find(c => c.email && c.email.toLowerCase() === emailInput);
-        if (found) {
-            document.getElementById('customerEmailInput').value = '';
-            renderCustomerPortal(found);
-            showScreen('customerPanelScreen');
-        } else {
-            showModal("Kayıt Bulunamadı", "Satıcı kaydı bulunmamaktadır!", "alert");
-        }
-    }
-
+    // Müşteri Paneli Oluşturma (Tarihçe ve Toplam Özet Dahil)
     function renderCustomerPortal(c) {
         const portal = document.getElementById('customerPortalContent');
         let balanceClass = c.balance > 0 ? 'borc' : (c.balance < 0 ? 'alacak' : '');
         let balanceText = c.balance > 0 ? `${c.balance} TL Borçlusunuz` : (c.balance < 0 ? `${Math.abs(c.balance)} TL Alacaklısınız` : `Hesabınız Kapalı / Sıfır`);
         let displayId = c.customerId || 'ID Yok';
 
+        let historyHtml = '';
+        if (c.history && c.history.length > 0) {
+            c.history.forEach(h => {
+                let isBorc = h.type === 'borc';
+                let itemClass = isBorc ? 'tx-borc' : 'tx-alacak';
+                let textDesc = isBorc ? `+${h.amount} TL Borç Eklendi` : `-${h.amount} TL Ödeme Alındı`;
+                let descExtra = h.desc ? ` (${h.desc})` : '';
+                historyHtml += `
+                    <div class="transaction-history-item ${itemClass}">
+                        <div>
+                            <div style="font-weight: 600;">${textDesc}${descExtra}</div>
+                            <div style="font-size: 11px; color: #7f8c8d; margin-top: 2px;">${h.date}</div>
+                        </div>
+                    </div>
+                `;
+            });
+        } else {
+            historyHtml = '<p style="text-align:center; color:#888; font-size:14px;">Henüz geçmiş işlem hareketi bulunmuyor.</p>';
+        }
+
         portal.innerHTML = `
-            <div class="card">
-                <h3>Sayın ${c.name}</h3>
-                <div class="customer-id">Müşteri No: ${displayId}</div>
-                <div style="margin: 8px 0; font-size: 14px;"><b>Gmail:</b> ${c.email || 'Yok'}</div>
-                <div style="margin: 8px 0; font-size: 14px;"><b>Telefon:</b> ${c.phone || 'Yok'}</div>
-                <hr style="border:0; border-top:1px solid #eee; margin:12px 0;">
-                <div style="font-size: 15px; margin-bottom: 5px;">Güncel Bakiye Durumunuz:</div>
-                <span class="balance ${balanceClass}" style="font-size: 18px;">${balanceText}</span>
+            <div class="card" style="text-align: center; background: var(--primary); color: white;">
+                <h3 style="color: white; margin-bottom: 5px;">Sayın ${c.name}</h3>
+                <div style="font-size: 12px; opacity: 0.8; font-family: monospace; margin-bottom: 10px;">Müşteri No: ${displayId}</div>
+                <div style="font-size: 13px; opacity: 0.9; margin-bottom: 15px;"><b>Gmail:</b> ${c.email || 'Yok'}</div>
+                <hr style="border:0; border-top:1px solid rgba(255,255,255,0.2); margin:10px 0;">
+                <div style="font-size: 14px; opacity: 0.9;">Güncel Bakiye Durumunuz:</div>
+                <span class="balance ${balanceClass}" style="font-size: 20px; display: block; margin-top: 5px;">${balanceText}</span>
             </div>
+            
+            <h3 style="margin-top: 20px; font-size: 16px; color: var(--primary);">İşlem Geçmişi ve Hareketler</h3>
+            <div>${historyHtml}</div>
         `;
     }
 
     function addCustomer() {
         const name = document.getElementById('name').value.trim();
         const phone = document.getElementById('phone').value.trim();
-        const email = document.getElementById('customerEmail').value.trim();
+        const email = document.getElementById('customerEmail').value.trim().toLowerCase();
         const amount = parseFloat(document.getElementById('amount').value);
         const type = document.getElementById('type').value;
+        const nowStr = new Date().toLocaleString('tr-TR');
 
         if (!name || isNaN(amount)) {
             showModal("Eksik Bilgi", "Lütfen geçerli bir isim ve tutar girin.", "alert");
@@ -456,10 +648,18 @@
         let existing = customers.find(c => c.name.toLowerCase() === name.toLowerCase());
         let netAmount = type === 'borc' ? amount : -amount;
 
+        let transactionObj = {
+            amount: amount,
+            type: type,
+            date: nowStr
+        };
+
         if (existing) {
             existing.balance += netAmount;
             if (phone) existing.phone = phone;
             if (email) existing.email = email;
+            if (!existing.history) existing.history = [];
+            existing.history.unshift(transactionObj);
         } else {
             let newCustomerId = generateUniqueCustomerId();
             customers.push({
@@ -468,7 +668,8 @@
                 name: name,
                 phone: phone,
                 email: email,
-                balance: netAmount
+                balance: netAmount,
+                history: [transactionObj]
             });
         }
 
@@ -488,6 +689,12 @@
         let customer = customers.find(c => c.id === id);
         if (customer) {
             customer.balance += (type === 'borc' ? amount : -amount);
+            if (!customer.history) customer.history = [];
+            customer.history.unshift({
+                amount: amount,
+                type: type,
+                date: new Date().toLocaleString('tr-TR')
+            });
             saveData();
         }
     }
