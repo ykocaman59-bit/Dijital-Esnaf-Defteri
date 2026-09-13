@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dijital Esnaf Defteri - Arşiv ve PDF Yönetimi</title>
+    <!-- jsPDF Kütüphanesi (PDF İndirme Sorununu Kesin Çözüm İçin) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
         :root {
             --primary: #2c3e50;
@@ -270,14 +272,6 @@
             border-left: 4px solid #3498db;
             font-size: 14px;
         }
-
-        /* YAZDIRMA / PDF STİLLERİ */
-        @media print {
-            body { background: #fff; color: #000; padding: 0; }
-            .screen, .container { display: none !important; }
-            #printArea { display: block !important; width: 100%; padding: 20px; }
-        }
-        #printArea { display: none; font-family: Arial, sans-serif; }
     </style>
 </head>
 <body>
@@ -367,7 +361,7 @@
             <h3 style="margin:0; color:var(--archive);">Arşiv & PDF Dosyaları</h3>
             <button onclick="closeArchiveModal()" style="width: auto; padding: 4px 8px; font-size: 14px; background:#e74c3c; margin:0;">X</button>
         </div>
-        <p style="font-size: 12px; color: #666; margin-top:0; text-align: left;">Burada dükkanı kapatılan esnafların PDF arşivi bulunur. Giriş yetkileri silinmiştir. Arşivdeki PDF'i indirip inceleyebilir; eğer PDF'i de tamamen silerseniz kayıt tamamen yok olur.</p>
+        <p style="font-size: 12px; color: #666; margin-top:0; text-align: left;">Burada dükkanı kapatılan esnafların PDF arşivi bulunur. Giriş yetkileri silinmiştir. Arşivdeki PDF'i doğrudan indirebilirsiniz.</p>
         <div id="archiveListContainer" style="max-height: 350px; overflow-y: auto; text-align: left;"></div>
     </div>
 </div>
@@ -390,7 +384,7 @@
         <div style="border-left: 1px solid rgba(255,255,255,0.2);">Toplam Borç <span id="totalAlacak" class="alacak">0 TL</span></div>
     </div>
 
-    <button class="btn-pdf" onclick="generateSellerPDF(currentLoggedInSeller.id)" style="margin-bottom: 15px;">📥 Tüm Defteri PDF Olarak İndir / Yazdır</button>
+    <button class="btn-pdf" onclick="generateSellerPDF(currentLoggedInSeller.id)" style="margin-bottom: 15px;">📥 Tüm Defteri PDF Olarak İndir</button>
 
     <div class="card">
         <h3>Yeni Müşteri Ekle</h3>
@@ -423,9 +417,6 @@
     <h2>Cari Hesap Özetim</h2>
     <div id="customerPortalContent"></div>
 </div>
-
-<!-- YAZDIRMA VE PDF ÇIKTI ALANI (Gizli) -->
-<div id="printArea"></div>
 
 <!-- GENEL UYARI MODALI -->
 <div class="modal-overlay" id="customModal">
@@ -627,7 +618,6 @@
         if (selectedSellerIdForAction !== null) {
             let seller = sellers.find(s => s.id === selectedSellerIdForAction);
             if (seller) {
-                // Giriş yetkilerini ve bilgilerini yok et, isPermanentDeleted yap
                 seller.isPermanentDeleted = true;
                 seller.archived = false;
                 seller.username = "SİLİNDİ";
@@ -648,7 +638,6 @@
 
     function confirmPdfCompletelyDelete() {
         if (selectedSellerIdForAction !== null) {
-            // Tamamen sistemden kazı
             sellers = sellers.filter(s => s.id !== selectedSellerIdForAction);
             customers = customers.filter(c => c.sellerId !== selectedSellerIdForAction);
             saveData();
@@ -662,7 +651,6 @@
         const container = document.getElementById('archiveListContainer');
         container.innerHTML = '';
         
-        // Arşivde gösterilecekler: Ya archived=true olanlar ya da isPermanentDeleted=true olanlar
         let archiveItems = sellers.filter(s => s.archived === true || s.isPermanentDeleted === true);
 
         if (archiveItems.length === 0) {
@@ -679,13 +667,11 @@
             
             let actionButtons = '';
             if (s.isPermanentDeleted) {
-                // Kalıcı silinmiş: Sadece PDF indir ve PDF'i tamamen sil butonları var (Aktif et butonu YOK!)
                 actionButtons = `
                     <button class="btn-pdf" onclick="generateSellerPDF(${s.id})">📥 PDF İndir</button>
                     <button class="btn-del" onclick="promptPdfCompletelyDelete(${s.id})">🗑️ PDF'i ve Kaydı Sil</button>
                 `;
             } else {
-                // Normal arşive atılmış: PDF indir, Tekrar aktif et, Kalıcı sil seçenekleri var
                 actionButtons = `
                     <button class="btn-pdf" onclick="generateSellerPDF(${s.id})">📥 PDF İndir</button>
                     <button class="btn-success" onclick="restoreSeller(${s.id})" style="background:var(--success);">✅ Tekrar Aktif Et</button>
@@ -695,8 +681,8 @@
 
             div.innerHTML = `
                 <div class="info">
-                    <h4 style="color:var(--primary);">${s.storeName} ${s.isPermanentDeleted ? '(PDF Arşivinde - Giriş Kapalı)' : '(Pasif Arşiv)'}</h4>
-                    <div style="font-size: 12px; color: #555;">Müşteri Sayısı: ${sellerCustomerCount} | Durum: ${s.isPermanentDeleted ? '<b>Kalıcı Silinmiş / Sadece PDF</b>' : '<b>Pasif Esnaf</b>'}</div>
+                    <h4 style="color:var(--primary);">${s.storeName} ${s.isPermanentDeleted ? '(PDF Arşivinde)' : '(Pasif Arşiv)'}</h4>
+                    <div style="font-size: 12px; color: #555;">Müşteri Sayısı: ${sellerCustomerCount} | Durum: ${s.isPermanentDeleted ? '<b>Giriş Kapalı</b>' : '<b>Pasif</b>'}</div>
                     <div class="actions">${actionButtons}</div>
                 </div>
             `;
@@ -743,66 +729,91 @@
         });
     }
 
-    // --- SATICI PDF / RAPOR OLUŞTURUCU ---
+    // --- KESİN ÇÖZÜMLÜ JSPDF TABANLI PDF İNDİRME MOTORU ---
     function generateSellerPDF(sellerId) {
         let targetSeller = sellers.find(s => s.id === sellerId);
         if (!targetSeller) return;
 
         let sellerCustomers = customers.filter(c => c.sellerId === sellerId);
-        let printArea = document.getElementById('printArea');
+        
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
 
         let totalBorc = 0;
         let totalAlacak = 0;
 
-        let customersHtml = '';
+        // Başlıklar ve üst bilgi
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(16);
+        doc.text(targetSeller.storeName + " - Cari Defter Raporu", 14, 20);
+
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(10);
+        doc.text("Rapor Tarihi: " + new Date().toLocaleString('tr-TR'), 14, 28);
+        if (targetSeller.isPermanentDeleted) {
+            doc.setTextColor(192, 57, 43);
+            doc.text("[KALICI SİLİNMİŞ - ARŞİV PDF DOSYASI]", 14, 34);
+            doc.setTextColor(0, 0, 0);
+        }
+
+        let yPos = targetSeller.isPermanentDeleted ? 42 : 36;
+        
+        // Hesap özeti hesaplama
+        sellerCustomers.forEach(c => {
+            if (c.balance > 0) totalBorc += c.balance;
+            if (c.balance < 0) totalAlacak += Math.abs(c.balance);
+        });
+
+        doc.setDrawColor(200, 200, 200);
+        doc.line(14, yPos, 196, yPos);
+        yPos += 8;
+
+        doc.setFont("helvetica", "bold");
+        doc.text(`Toplam Borç: ${totalBorc} TL   |   Toplam Alacak: ${totalAlacak} TL`, 14, yPos);
+        yPos += 10;
+
+        doc.line(14, yPos, 196, yPos);
+        yPos += 10;
+
         if (sellerCustomers.length === 0) {
-            customersHtml = '<p>Bu satıcıya ait kayıtlı müşteri bulunmamaktadır.</p>';
+            doc.setFont("helvetica", "normal");
+            doc.text("Bu işletmeye ait kayıtlı müşteri bulunmamaktadır.", 14, yPos);
         } else {
             sellerCustomers.forEach((c, index) => {
-                if (c.balance > 0) totalBorc += c.balance;
-                if (c.balance < 0) totalAlacak += Math.abs(c.balance);
+                if (yPos > 270) { // Sayfa sınırı aşılırsa yeni sayfa aç
+                    doc.addPage();
+                    yPos = 20;
+                }
 
                 let bText = c.balance > 0 ? `${c.balance} TL Borç` : (c.balance < 0 ? `${Math.abs(c.balance)} TL Alacak` : `Hesap Sıfır`);
                 
-                let historyList = '';
-                if (c.history && c.history.length > 0) {
-                    c.history.forEach(h => {
-                        let isB = h.type === 'borc';
-                        historyList += `<li>[${h.date}] - ${isB ? 'Borç Eklendi: +' + h.amount + ' TL' : 'Ödeme Alındı: -' + h.amount + ' TL'}</li>`;
-                    });
-                } else {
-                    historyList = '<li>İşlem geçmişi bulunmuyor.</li>';
-                }
+                doc.setFont("helvetica", "bold");
+                doc.setFontSize(11);
+                doc.text(`${index + 1}. Müşteri: ${c.name} (No: ${c.customerId})`, 14, yPos);
+                yPos += 6;
 
-                customersHtml += `
-                    <div style="border-bottom: 1px solid #ccc; padding-bottom: 10px; margin-bottom: 10px;">
-                        <p><b>${index + 1}. Müşteri:</b> ${c.name} | <b>Müşteri No:</b> ${c.customerId} | <b>Tel:</b> ${c.phone} | <b>TC:</b> ${c.tcNo}</p>
-                        <p><b>Güncel Bakiye:</b> ${bText}</p>
-                        <div style="font-size: 13px; color: #444; margin-left: 15px;">
-                            <b>İşlem Hareketleri:</b>
-                            <ul>${historyList}</ul>
-                        </div>
-                    </div>
-                `;
+                doc.setFont("helvetica", "normal");
+                doc.setFontSize(9);
+                doc.text(`Telefon: ${c.phone} | TC: ${c.tcNo} | Bakiye: ${bText}`, 18, yPos);
+                yPos += 5;
+
+                if (c.history && c.history.length > 0) {
+                    doc.text("Son İşlemler:", 18, yPos);
+                    yPos += 4;
+                    c.history.slice(0, 5).forEach(h => {
+                        if (yPos > 280) { doc.addPage(); yPos = 20; }
+                        let txText = h.type === 'borc' ? `[+${h.amount} TL Borç Eklendi]` : `[-${h.amount} TL Ödeme Alındı]`;
+                        doc.text(` - ${h.date}: ${txText}`, 22, yPos);
+                        yPos += 4;
+                    });
+                }
+                yPos += 6;
             });
         }
 
-        printArea.innerHTML = `
-            <div style="text-align: center; border-bottom: 2px solid #333; padding-bottom: 10px; margin-bottom: 20px;">
-                <h1 style="margin: 0; color: #2c3e50;">${targetSeller.storeName} - Cari Hesap ve Defter Arşiv Raporu</h1>
-                <p style="margin: 5px 0 0 0; font-size: 14px; color: #666;">Rapor Tarihi: ${new Date().toLocaleString('tr-TR')} ${targetSeller.isPermanentDeleted ? '(KALICI SİLİNMİŞ - PDF ARŞİVİ)' : ''}</p>
-            </div>
-            <div style="margin-bottom: 20px; background: #f8f9fa; padding: 10px; border-radius: 5px;">
-                <p><b>Toplam Alacak:</b> <span style="color:var(--danger);">${totalBorc} TL</span> | <b>Toplam Borç / Emanet:</b> <span style="color:var(--success);">${totalAlacak} TL</span></p>
-            </div>
-            <h3>Müşteri Listesi ve Detayları</h3>
-            <div>${customersHtml}</div>
-            <div style="margin-top: 40px; text-align: center; font-size: 12px; color: #7f8c8d; border-top: 1px dashed #ccc; padding-top: 10px;">
-                Dijital Esnaf Defteri Arşiv Sistemi Tarafından Üretilmiştir.
-            </div>
-        `;
-
-        window.print();
+        // Dosyayı doğrudan tarayıcıya indirt
+        let safeName = targetSeller.storeName.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+        doc.save(`${safeName}_cari_defter_raporu.pdf`);
     }
 
     // --- SATICI GİRİŞ VE PANEL İŞLEMLERİ ---
