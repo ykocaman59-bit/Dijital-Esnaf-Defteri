@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dijital Esnaf Defteri - Çoklu Satıcı ve PDF Arşiv</title>
+    <title>Dijital Esnaf Defteri - Arşiv ve PDF Yönetimi</title>
     <style>
         :root {
             --primary: #2c3e50;
@@ -12,6 +12,7 @@
             --warning: #f39c12;
             --bg: #f5f6fa;
             --patron: #8e44ad;
+            --archive: #7f8c8d;
         }
         * {
             -webkit-user-select: none;
@@ -119,6 +120,7 @@
         .btn-warn { background-color: var(--warning); }
         .btn-patron { background-color: var(--patron); }
         .btn-pdf { background-color: #e67e22; }
+        .btn-archive { background-color: var(--archive); }
         
         .summary-box {
             display: flex;
@@ -335,11 +337,14 @@
 <div id="patronPanelScreen" class="screen container">
     <div style="display: flex; justify-content: space-between; align-items: center;">
         <h2 style="color: var(--patron);">Patron Paneli</h2>
-        <button onclick="showScreen('roleSelectScreen')" style="width: auto; padding: 6px 10px; background-color: #e74c3c; font-size: 13px;">Çıkış</button>
+        <div style="display:flex; gap:5px;">
+            <button onclick="openArchiveModal()" style="width: auto; padding: 6px 10px; background-color: var(--archive); font-size: 13px;">📦 Arşiv & PDF Dosyaları</button>
+            <button onclick="showScreen('roleSelectScreen')" style="width: auto; padding: 6px 10px; background-color: #e74c3c; font-size: 13px;">Çıkış</button>
+        </div>
     </div>
 
     <div class="summary-box" style="background-color: var(--patron);">
-        <div>Toplam Satıcı <span id="patronTotalSellers">0</span></div>
+        <div>Aktif Satıcı <span id="patronTotalSellers">0</span></div>
         <div style="border-left: 1px solid rgba(255,255,255,0.2);">Toplam Müşteri <span id="patronTotalCustomers">0</span></div>
     </div>
 
@@ -351,8 +356,20 @@
         <button onclick="addNewSeller()" style="background-color: var(--patron);">Satıcıyı Kaydet</button>
     </div>
 
-    <h3>Kayıtlı Satıcılar Listesi ve Raporları</h3>
+    <h3>Aktif Satıcılar Listesi</h3>
     <div id="patronSellersList"></div>
+</div>
+
+<!-- ARŞİV VE PDF ARŞİV DOSYALARI MODALI -->
+<div class="modal-overlay" id="archiveModal">
+    <div class="modal-box" style="max-width: 450px; width: 95%;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+            <h3 style="margin:0; color:var(--archive);">Arşiv & PDF Dosyaları</h3>
+            <button onclick="closeArchiveModal()" style="width: auto; padding: 4px 8px; font-size: 14px; background:#e74c3c; margin:0;">X</button>
+        </div>
+        <p style="font-size: 12px; color: #666; margin-top:0; text-align: left;">Burada dükkanı kapatılan esnafların PDF arşivi bulunur. Giriş yetkileri silinmiştir. Arşivdeki PDF'i indirip inceleyebilir; eğer PDF'i de tamamen silerseniz kayıt tamamen yok olur.</p>
+        <div id="archiveListContainer" style="max-height: 350px; overflow-y: auto; text-align: left;"></div>
+    </div>
 </div>
 
 <!-- 6. SATICI ANA PANELİ -->
@@ -421,13 +438,13 @@
 
 <script>
     let sellers = JSON.parse(localStorage.getItem('esnaf_sellers')) || [
-        { id: 1, storeName: "Merkez Kırtasiye", username: "merkez", password: "123" }
+        { id: 1, storeName: "Merkez Kırtasiye", username: "merkez", password: "123", archived: false, isPermanentDeleted: false }
     ];
     let customers = JSON.parse(localStorage.getItem('esnaf_customers')) || [];
 
     let currentLoggedInSeller = null;
     let selectedCustomerId = null;
-    let selectedSellerIdForDelete = null;
+    let selectedSellerIdForAction = null;
 
     window.addEventListener('load', () => {
         setTimeout(() => {
@@ -490,11 +507,23 @@
                 <button class="btn-cancel" onclick="closeModal()">İptal</button>
                 <button style="background-color: var(--danger);" onclick="confirmDeleteCustomer()">Evet, Sil</button>
             `;
-        } else if (type === 'confirm_seller_delete') {
-            selectedSellerIdForDelete = actionId;
+        } else if (type === 'confirm_seller_archive') {
+            selectedSellerIdForAction = actionId;
             buttonsEl.innerHTML = `
                 <button class="btn-cancel" onclick="closeModal()">İptal</button>
-                <button style="background-color: var(--danger);" onclick="confirmDeleteSeller()">Evet, Sil</button>
+                <button style="background-color: var(--archive);" onclick="confirmArchiveSeller()">Arşive At</button>
+            `;
+        } else if (type === 'confirm_seller_permanent_delete') {
+            selectedSellerIdForAction = actionId;
+            buttonsEl.innerHTML = `
+                <button class="btn-cancel" onclick="closeModal()">İptal</button>
+                <button style="background-color: var(--danger);" onclick="confirmPermanentDeleteSeller()">Kalıcı Sil & PDF Arşivle</button>
+            `;
+        } else if (type === 'confirm_pdf_completely_delete') {
+            selectedSellerIdForAction = actionId;
+            buttonsEl.innerHTML = `
+                <button class="btn-cancel" onclick="closeModal()">İptal</button>
+                <button style="background-color: var(--danger);" onclick="confirmPdfCompletelyDelete()">PDF ve Kaydı Uçur</button>
             `;
         } else {
             buttonsEl.innerHTML = `<button onclick="closeModal()">Tamam</button>`;
@@ -505,7 +534,7 @@
     function closeModal() {
         document.getElementById('customModal').classList.remove('active');
         selectedCustomerId = null;
-        selectedSellerIdForDelete = null;
+        selectedSellerIdForAction = null;
     }
 
     // --- PATRON İŞLEMLERİ ---
@@ -536,8 +565,8 @@
             return;
         }
 
-        if (sellers.some(s => s.username === username)) {
-            showModal("Kullanıcı Adı Alınmış", "Bu kullanıcı adı başka bir satıcı tarafından kullanılıyor.", "alert");
+        if (sellers.some(s => s.username === username && !s.isPermanentDeleted)) {
+            showModal("Kullanıcı Adı Alınmış", "Bu kullanıcı adı başka bir aktif satıcı tarafından kullanılıyor.", "alert");
             return;
         }
 
@@ -545,7 +574,9 @@
             id: Date.now(),
             storeName: storeName,
             username: username,
-            password: password
+            password: password,
+            archived: false,
+            isPermanentDeleted: false
         });
 
         storeInput.value = '';
@@ -557,45 +588,142 @@
         showModal("Başarılı", `"${storeName}" dükkanı ve satıcı hesabı başarıyla oluşturuldu.`, "alert");
     }
 
-    function promptDeleteSeller(sellerId) {
+    function promptArchiveSeller(sellerId) {
         let seller = sellers.find(s => s.id === sellerId);
         if (!seller) return;
-
-        // GÜVENLİK KİLİDİ: Aktif müşterisi/borcu olan satıcı silinemez, önce uyarı verilir veya PDF alması söylenir
-        let sellerCustomers = customers.filter(c => c.sellerId === sellerId);
-        let hasActiveDebt = sellerCustomers.some(c => c.balance !== 0);
-
-        if (hasActiveDebt) {
-            showModal("Silme Engellendi!", `"${seller.storeName}" adlı satıcının hesaplarında henüz kapatılmamış borç/alacak bakiyeleri bulunan müşteriler var! Hesaplar temizlenmeden veya PDF arşivi alınmadan bu satıcı silinemez.`, "alert");
-            return;
-        }
-
-        showModal("Satıcı Silme", `"${seller.storeName}" adlı satıcıyı silmek istediğinize emin misiniz? (Önce PDF raporunu aldığınızdan emin olun)`, "confirm_seller_delete", sellerId);
+        showModal("Satıcıyı Arşive At", `"${seller.storeName}" adlı satıcıyı arşive taşımak istediğinize emin misiniz? (Satıcı geçici olarak giriş yapamaz ancak istendiğinde tekrar aktif edilebilir)`, "confirm_seller_archive", sellerId);
     }
 
-    function confirmDeleteSeller() {
-        if (selectedSellerIdForDelete !== null) {
-            sellers = sellers.filter(s => s.id !== selectedSellerIdForDelete);
-            customers = customers.filter(c => c.sellerId !== selectedSellerIdForDelete);
-            saveData();
-            renderPatronPanel();
+    function confirmArchiveSeller() {
+        if (selectedSellerIdForAction !== null) {
+            let seller = sellers.find(s => s.id === selectedSellerIdForAction);
+            if (seller) {
+                seller.archived = true;
+                saveData();
+                renderPatronPanel();
+                openArchiveModal();
+            }
             closeModal();
         }
     }
 
+    function restoreSeller(sellerId) {
+        let seller = sellers.find(s => s.id === sellerId);
+        if (seller) {
+            seller.archived = false;
+            saveData();
+            renderPatronPanel();
+            openArchiveModal();
+        }
+    }
+
+    function promptPermanentDeleteSeller(sellerId) {
+        let seller = sellers.find(s => s.id === sellerId);
+        if (!seller) return;
+        showModal("Kalıcı Sil & PDF Arşivle", `DİKKAT: "${seller.storeName}" adlı satıcının giriş bilgileri (şifre/kullanıcı adı) tamamen silinecek ve sistemden çıkacak. Sadece defter PDF dosyası patron arşivine kaldırılacak. Onaylıyor musunuz?`, "confirm_seller_permanent_delete", sellerId);
+    }
+
+    function confirmPermanentDeleteSeller() {
+        if (selectedSellerIdForAction !== null) {
+            let seller = sellers.find(s => s.id === selectedSellerIdForAction);
+            if (seller) {
+                // Giriş yetkilerini ve bilgilerini yok et, isPermanentDeleted yap
+                seller.isPermanentDeleted = true;
+                seller.archived = false;
+                seller.username = "SİLİNDİ";
+                seller.password = "SİLİNDİ";
+                saveData();
+                renderPatronPanel();
+                openArchiveModal();
+            }
+            closeModal();
+        }
+    }
+
+    function promptPdfCompletelyDelete(sellerId) {
+        let seller = sellers.find(s => s.id === sellerId);
+        if (!seller) return;
+        showModal("PDF Arşivini Tamamen Sil", `DİKKAT: "${seller.storeName}" adlı satıcıya ait PDF arşivi de dahil olmak üzere tüm veriler kalıcı olarak sistemden silinecektir. Bu işlem geri alınamaz!`, "confirm_pdf_completely_delete", sellerId);
+    }
+
+    function confirmPdfCompletelyDelete() {
+        if (selectedSellerIdForAction !== null) {
+            // Tamamen sistemden kazı
+            sellers = sellers.filter(s => s.id !== selectedSellerIdForAction);
+            customers = customers.filter(c => c.sellerId !== selectedSellerIdForAction);
+            saveData();
+            renderPatronPanel();
+            openArchiveModal();
+            closeModal();
+        }
+    }
+
+    function openArchiveModal() {
+        const container = document.getElementById('archiveListContainer');
+        container.innerHTML = '';
+        
+        // Arşivde gösterilecekler: Ya archived=true olanlar ya da isPermanentDeleted=true olanlar
+        let archiveItems = sellers.filter(s => s.archived === true || s.isPermanentDeleted === true);
+
+        if (archiveItems.length === 0) {
+            container.innerHTML = '<p style="text-align:center; color:#888;">Arşivde kayıtlı dosya bulunmuyor.</p>';
+            document.getElementById('archiveModal').classList.add('active');
+            return;
+        }
+
+        archiveItems.forEach(s => {
+            let sellerCustomerCount = customers.filter(c => c.sellerId === s.id).length;
+            let div = document.createElement('div');
+            div.className = 'seller-admin-item';
+            div.style.borderLeft = s.isPermanentDeleted ? '4px solid var(--danger)' : '4px solid var(--archive)';
+            
+            let actionButtons = '';
+            if (s.isPermanentDeleted) {
+                // Kalıcı silinmiş: Sadece PDF indir ve PDF'i tamamen sil butonları var (Aktif et butonu YOK!)
+                actionButtons = `
+                    <button class="btn-pdf" onclick="generateSellerPDF(${s.id})">📥 PDF İndir</button>
+                    <button class="btn-del" onclick="promptPdfCompletelyDelete(${s.id})">🗑️ PDF'i ve Kaydı Sil</button>
+                `;
+            } else {
+                // Normal arşive atılmış: PDF indir, Tekrar aktif et, Kalıcı sil seçenekleri var
+                actionButtons = `
+                    <button class="btn-pdf" onclick="generateSellerPDF(${s.id})">📥 PDF İndir</button>
+                    <button class="btn-success" onclick="restoreSeller(${s.id})" style="background:var(--success);">✅ Tekrar Aktif Et</button>
+                    <button class="btn-del" onclick="promptPermanentDeleteSeller(${s.id})">❌ Kalıcı Sil</button>
+                `;
+            }
+
+            div.innerHTML = `
+                <div class="info">
+                    <h4 style="color:var(--primary);">${s.storeName} ${s.isPermanentDeleted ? '(PDF Arşivinde - Giriş Kapalı)' : '(Pasif Arşiv)'}</h4>
+                    <div style="font-size: 12px; color: #555;">Müşteri Sayısı: ${sellerCustomerCount} | Durum: ${s.isPermanentDeleted ? '<b>Kalıcı Silinmiş / Sadece PDF</b>' : '<b>Pasif Esnaf</b>'}</div>
+                    <div class="actions">${actionButtons}</div>
+                </div>
+            `;
+            container.appendChild(div);
+        });
+
+        document.getElementById('archiveModal').classList.add('active');
+    }
+
+    function closeArchiveModal() {
+        document.getElementById('archiveModal').classList.remove('active');
+    }
+
     function renderPatronPanel() {
-        document.getElementById('patronTotalSellers').innerText = sellers.length;
+        let activeSellers = sellers.filter(s => !s.archived && !s.isPermanentDeleted);
+        document.getElementById('patronTotalSellers').innerText = activeSellers.length;
         document.getElementById('patronTotalCustomers').innerText = customers.length;
 
         const listEl = document.getElementById('patronSellersList');
         listEl.innerHTML = '';
 
-        if (sellers.length === 0) {
-            listEl.innerHTML = '<p style="text-align:center; color:#888;">Henüz kayıtlı satıcı yok.</p>';
+        if (activeSellers.length === 0) {
+            listEl.innerHTML = '<p style="text-align:center; color:#888;">Henüz aktif satıcı yok.</p>';
             return;
         }
 
-        sellers.forEach(s => {
+        activeSellers.forEach(s => {
             let sellerCustomerCount = customers.filter(c => c.sellerId === s.id).length;
             let div = document.createElement('div');
             div.className = 'seller-admin-item';
@@ -605,8 +733,9 @@
                     <div style="font-size: 13px; color: #555;">Kullanıcı Adı: <b>${s.username}</b> | Şifre: <b>${s.password}</b></div>
                     <div style="font-size: 12px; color: #7f8c8d; margin-top: 3px;">Kayıtlı Müşteri Sayısı: ${sellerCustomerCount}</div>
                     <div class="actions">
-                        <button class="btn-pdf" onclick="generateSellerPDF(${s.id})">PDF Arşivini İndir</button>
-                        <button class="btn-del" onclick="promptDeleteSeller(${s.id})">Satıcıyı Sil</button>
+                        <button class="btn-pdf" onclick="generateSellerPDF(${s.id})">PDF İndir</button>
+                        <button class="btn-archive" onclick="promptArchiveSeller(${s.id})">Arşive At</button>
+                        <button class="btn-del" onclick="promptPermanentDeleteSeller(${s.id})">Kalıcı Sil</button>
                     </div>
                 </div>
             `;
@@ -660,8 +789,8 @@
 
         printArea.innerHTML = `
             <div style="text-align: center; border-bottom: 2px solid #333; padding-bottom: 10px; margin-bottom: 20px;">
-                <h1 style="margin: 0; color: #2c3e50;">${targetSeller.storeName} - Cari Hesap ve Defter Özeti</h1>
-                <p style="margin: 5px 0 0 0; font-size: 14px; color: #666;">Rapor Tarihi: ${new Date().toLocaleString('tr-TR')}</p>
+                <h1 style="margin: 0; color: #2c3e50;">${targetSeller.storeName} - Cari Hesap ve Defter Arşiv Raporu</h1>
+                <p style="margin: 5px 0 0 0; font-size: 14px; color: #666;">Rapor Tarihi: ${new Date().toLocaleString('tr-TR')} ${targetSeller.isPermanentDeleted ? '(KALICI SİLİNMİŞ - PDF ARŞİVİ)' : ''}</p>
             </div>
             <div style="margin-bottom: 20px; background: #f8f9fa; padding: 10px; border-radius: 5px;">
                 <p><b>Toplam Alacak:</b> <span style="color:var(--danger);">${totalBorc} TL</span> | <b>Toplam Borç / Emanet:</b> <span style="color:var(--success);">${totalAlacak} TL</span></p>
@@ -669,7 +798,7 @@
             <h3>Müşteri Listesi ve Detayları</h3>
             <div>${customersHtml}</div>
             <div style="margin-top: 40px; text-align: center; font-size: 12px; color: #7f8c8d; border-top: 1px dashed #ccc; padding-top: 10px;">
-                Dijital Esnaf Defteri Sistemi Tarafından Üretilmiştir.
+                Dijital Esnaf Defteri Arşiv Sistemi Tarafından Üretilmiştir.
             </div>
         `;
 
@@ -681,7 +810,7 @@
         const u = document.getElementById('sellerUser').value.trim().toLowerCase();
         const p = document.getElementById('sellerPass').value.trim();
 
-        let foundSeller = sellers.find(s => s.username === u && s.password === p);
+        let foundSeller = sellers.find(s => s.username === u && s.password === p && !s.archived && !s.isPermanentDeleted);
 
         if (foundSeller) {
             currentLoggedInSeller = foundSeller;
@@ -692,7 +821,7 @@
             showScreen('sellerPanelScreen');
             renderSellerPanel();
         } else {
-            showModal("Hatalı Giriş", "Satıcı kullanıcı adı veya şifre hatalı!", "alert");
+            showModal("Hatalı Giriş", "Satıcı kullanıcı adı veya şifre hatalı ya da bu hesap kapatılmış/arşivlenmiştir!", "alert");
         }
     }
 
@@ -930,8 +1059,14 @@
         let found = customers.find(c => c.credentials && c.credentials.active && c.credentials.username === uInput && c.credentials.password === pInput);
 
         if (found) {
+            let parentSeller = sellers.find(s => s.id === found.sellerId);
+            if (parentSeller && (parentSeller.archived || parentSeller.isPermanentDeleted)) {
+                showModal("Giriş Engellendi", "Bu işletme artık faaliyette değil, müşteri girişi kapatılmıştır.", "alert");
+                return;
+            }
+
             document.getElementById('loginUsername').value = '';
-            document.getElementById('loginPassword').value = ''.trim();
+            document.getElementById('loginPassword').value = '';
             renderCustomerPortal(found);
             showScreen('customerPanelScreen');
         } else {
